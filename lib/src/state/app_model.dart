@@ -177,7 +177,7 @@ class AppModel extends ChangeNotifier {
     index = store.loadIndex(pr.root) ?? SearchIndex(root: pr.root);
     if (options.tree) expandAll();
     _save();
-    status = index.isEmpty ? 'tip: the project is indexed by itself in the background, or press INDEX' : 'ready';
+    status = index.isEmpty ? 'tip: the project is indexed by itself in the background; INDEX has more' : 'ready';
     notifyListeners();
     autoIndexIfStale();
   }
@@ -423,7 +423,7 @@ class AppModel extends ChangeNotifier {
     cache.clear();
     _searchCache = null;
     if (options.drives) refreshDrives();
-    say('re-read from disk${index.isEmpty ? '' : ' - press INDEX to refresh the index too'}');
+    say('re-read from disk${index.isEmpty ? '' : ' - INDEX → Index this project refreshes the index too'}');
   }
 
   /// The four numbers top right: modules, on disk, indexed, missing

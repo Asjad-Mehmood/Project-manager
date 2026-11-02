@@ -51,15 +51,6 @@ class Header extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: t(11, color: C.subtitle, ls: .6),
                   ),
-                  if (model.project != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      model.root,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: t(10, color: C.faint, ls: 1.2, m: true),
-                    ),
-                  ],
                 ],
               ],
             ),

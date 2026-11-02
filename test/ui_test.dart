@@ -199,12 +199,12 @@ void main() {
     await tester.pumpAndSettle();
 
     // keys typed in a text box belong to the text, not to the panel
-    await tester.enterText(find.byType(TextField).at(1), 'abc');
+    await tester.enterText(find.byType(TextField).first, 'abc');
     await _keys(tester, [], LogicalKeyboardKey.backspace);
     await _keys(tester, [LogicalKeyboardKey.control], LogicalKeyboardKey.keyA);
     expect(h.model.panelPath, h.at('10_Survey'));
     expect(h.model.selected, hasLength(1)); // Ctrl+A selected the text, not the four items
-    await tester.tap(find.text('1 item selected')); // back to the window
+    await tester.tap(find.text('1 item')); // back to the window
     await tester.pump();
     h.model.setQuery('');
 
@@ -236,7 +236,7 @@ void main() {
     final h = _project();
     addTearDown(h.dispose);
     await _show(tester, h);
-    await tester.enterText(find.byType(TextField).at(1), 'survey');
+    await tester.enterText(find.byType(TextField).first, 'survey');
     await tester.pump();
     expect(h.model.showingResults, isTrue);
     expect(find.text('Survey_Report_Rev2.pdf'), findsOneWidget);
@@ -272,6 +272,82 @@ void main() {
     await tester.tap(_btn('CLOSE'));
     await tester.pumpAndSettle();
     expect(File(h.at('10_Survey/02_Topographic Survey/Control.kml')).existsSync(), isTrue);
+  });
+
+  testWidgets('every v6.2 option is still there, in the toolbar\'s menus', (tester) async {
+    final h = _project();
+    addTearDown(h.dispose);
+    await _show(tester, h);
+    Future<void> open(Finder f) async {
+      await tester.tap(f);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> close() async {
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+    }
+
+    // project: SET / BROWSE / FIND / OPEN ROOT, rename, switch
+    await open(find.byTooltip('Switch or open a project'));
+    for (final x in [
+      'YOUR PROJECTS',
+      'Pick its folder ...',
+      'Type or paste its path ...',
+      'Find projects on my drives ...',
+      'Open the root folder in Explorer',
+      'Rename the project ...',
+    ]) {
+      expect(find.text(x), findsOneWidget, reason: x);
+    }
+    await _shot(tester, '7-menu-project');
+    await close();
+
+    // LIST: ALWAYS TREE, MISSING, COLLAPSE, SCAN, FIX NAMES, REBUILD, REFRESH
+    await open(find.text('LIST'));
+    for (final x in [
+      'Always open the whole tree',
+      'Hide modules that are missing',
+      'Collapse everything',
+      'Scan: add new folders',
+      'Fix names: follow renamed folders',
+      'Rebuild the list from this PC',
+      'Refresh from the disk  (F5)',
+    ]) {
+      expect(find.text(x), findsOneWidget, reason: x);
+    }
+    await _shot(tester, '8-menu-list');
+    await tester.tap(find.text('Always open the whole tree'));
+    await tester.pumpAndSettle();
+    expect(h.model.options.tree, isTrue);
+
+    // INDEX: the three scopes, STOP, how it is made
+    await open(find.text('INDEX'));
+    for (final x in [
+      'Index this project',
+      'Index all drives',
+      'Index the project by itself',
+      'Files too, not only folders',
+    ]) {
+      expect(find.text(x), findsOneWidget, reason: x);
+    }
+    expect(find.textContaining('Index the whole drive'), findsOneWidget);
+    await close();
+
+    // GO TO: pins and DRIVES
+    await open(find.text('GO TO'));
+    expect(find.text('Show the drives strip'), findsOneWidget);
+    expect(find.text('D:  Projects'), findsOneWidget);
+    await tester.tap(find.text('Show the drives strip'));
+    await tester.pumpAndSettle();
+    expect(h.model.options.drives, isTrue);
+
+    // VIEW: the six layouts
+    await open(find.byType(LayoutPicture).first);
+    expect(find.text('Tree above, panel below'), findsOneWidget);
+    await tester.tap(find.text('Panel only'));
+    await tester.pumpAndSettle();
+    expect(h.model.layout, 5);
   });
 
   testWidgets('with no project: a start page that says what to do', (tester) async {

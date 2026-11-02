@@ -41,7 +41,7 @@ class Commands {
   Future<void> setRoot(String path) async {
     final why = model.setRoot(path);
     if (why != null) {
-      await message(context, 'ROOT PATH', why);
+      await message(context, 'OPEN A PROJECT', why);
       return;
     }
     final pr = model.project;
@@ -59,7 +59,11 @@ class Commands {
         if (d.ready && d.type != 'CD Drive') d.root,
     ];
     if (roots.isEmpty) {
-      await message(context, 'FIND', 'No drive could be read on this PC.\n\nUse BROWSE and pick the project folder.');
+      await message(
+        context,
+        'FIND',
+        'No drive could be read on this PC.\n\nPick the project folder from the project menu instead.',
+      );
       return;
     }
     final picked = await findProjectDialog(context, roots);
@@ -86,7 +90,7 @@ class Commands {
 
   Future<void> openRoot() async {
     if (!model.rootExists) {
-      await message(context, 'OPEN ROOT', 'Root folder not found on this PC:\n\n   ${model.root}');
+      await message(context, 'OPEN IN EXPLORER', 'Root folder not found on this PC:\n\n   ${model.root}');
       return;
     }
     await model.shell.openFolder(model.root);
@@ -128,7 +132,7 @@ class Commands {
       context,
       'FIX NAMES',
       '${r.fixed.length} name(s) repaired.\n\n${r.lost.length} not found on this PC. Make those folders, or use '
-          'REBUILD to drop them, or MISSING to hide them.',
+          'LIST → Rebuild to drop them, or LIST → Hide missing to hide them.',
       yes: 'MAKE THE FOLDERS',
       no: 'LEAVE THEM',
       lines: [for (final (a, b) in r.fixed) '$a  →  $b', ...r.lost.map((l) => '$l    not found')],
@@ -143,8 +147,8 @@ class Commands {
 
   Future<void> _noRoot() => message(
     context,
-    'ROOT PATH',
-    'Root folder not found on this PC:\n\n   ${model.root}\n\nUse BROWSE or FIND first.',
+    'OPEN A PROJECT',
+    'Root folder not found on this PC:\n\n   ${model.root}\n\nOpen it from the project menu (top left) first.',
   );
 
   Future<void> editTitle() async {
@@ -181,6 +185,40 @@ class Commands {
     }
   }
 
+  /// ROOT PATH and SET: type or paste the project's folder
+  Future<void> typePath() async {
+    final v = await ask(
+      context,
+      'OPEN A PROJECT',
+      'Type or paste the project\'s master folder, for example D:\\Project',
+      initial: model.root,
+      ok: 'OPEN',
+      check: (x) => folderExists(x) ? null : 'that folder is not on this PC',
+    );
+    if (v != null) await setRoot(v);
+  }
+
+  Future<void> shortcuts() => message(
+    context,
+    'KEYBOARD SHORTCUTS',
+    'Anywhere',
+    lines: const [
+      'Alt+1 … Alt+6     the six views',
+      'Ctrl+F            search',
+      'F5                read the disk again',
+      '',
+      'In the panel',
+      'Up / Down         move (Shift: select more)',
+      'Enter             open',
+      'Backspace         the folder above',
+      'Alt+Left / Right  back / forward',
+      'Ctrl+A            select all       Esc  select none',
+      'Ctrl+C / X / V    copy / cut / paste',
+      'F2                rename           Delete  to the Recycle Bin',
+      'Ctrl+Z            undo',
+    ],
+  );
+
   Future<void> about() => message(
     context,
     '$appName  v$appVersion',
@@ -190,8 +228,9 @@ class Commands {
 
   // ---------------------------------------------------------------- index
 
-  Future<void> index() async {
-    final sc = model.options.scope;
+  Future<void> index([IndexScope? scope]) async {
+    final sc = scope ?? model.options.scope;
+    model.setScope(sc);
     if (sc != IndexScope.project) {
       final ok = await confirm(
         context,

@@ -166,8 +166,20 @@ class _ModuleTile extends StatelessWidget {
                 if (width >= 620) ...[SubChip(row.subCount), const SizedBox(width: 9)],
                 Dot(row.exists),
                 const SizedBox(width: 11),
-                Btn('VIEW', icon: Icons.folder_open, onTap: row.exists ? () => cmd.view(row.path) : null),
-                Btn('OPEN', icon: Icons.bolt, kind: BtnKind.amber, onTap: row.exists ? () => cmd.open(row.path) : null),
+                Btn(
+                  'VIEW',
+                  icon: Icons.folder_open,
+                  kind: BtnKind.ghost,
+                  tip: 'Show it in the panel',
+                  onTap: row.exists ? () => cmd.view(row.path) : null,
+                ),
+                Btn(
+                  'OPEN',
+                  icon: Icons.bolt,
+                  kind: BtnKind.ghost,
+                  tip: 'Open in Explorer  (double-click)',
+                  onTap: row.exists ? () => cmd.open(row.path) : null,
+                ),
               ],
             ),
           ),
@@ -221,8 +233,20 @@ class _KidTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 14),
                 if (width >= 620) ...[SubChip(subs), const SizedBox(width: 9)],
-                Btn('VIEW', icon: Icons.folder_open, onTap: () => cmd.view(entry.path)),
-                Btn('OPEN', icon: Icons.bolt, kind: BtnKind.amber, onTap: () => cmd.open(entry.path)),
+                Btn(
+                  'VIEW',
+                  icon: Icons.folder_open,
+                  kind: BtnKind.ghost,
+                  tip: 'Show it in the panel',
+                  onTap: () => cmd.view(entry.path),
+                ),
+                Btn(
+                  'OPEN',
+                  icon: Icons.bolt,
+                  kind: BtnKind.ghost,
+                  tip: 'Open in Explorer  (double-click)',
+                  onTap: () => cmd.open(entry.path),
+                ),
               ],
             ),
           ),
@@ -322,6 +346,7 @@ class _Results extends StatelessWidget {
                     Kind.files => 'FILES',
                   },
                   small: true,
+                  kind: BtnKind.ghost,
                   lit: model.resultKind == k,
                   onTap: () => model.setResultKind(k),
                 ),
@@ -403,8 +428,14 @@ class _HitTile extends StatelessWidget {
               ),
               if (d != null && width >= 760) ...[const SizedBox(width: 9), DisciplineChip(d)],
               const SizedBox(width: 9),
-              Btn('VIEW', icon: Icons.folder_open, onTap: view),
-              Btn('OPEN', icon: Icons.bolt, kind: BtnKind.amber, onTap: () => cmd.open(hit.path)),
+              Btn('VIEW', icon: Icons.folder_open, kind: BtnKind.ghost, tip: 'Show it in the panel', onTap: view),
+              Btn(
+                'OPEN',
+                icon: Icons.bolt,
+                kind: BtnKind.ghost,
+                tip: 'Open it  (double-click)',
+                onTap: () => cmd.open(hit.path),
+              ),
             ],
           ),
         ),
@@ -459,10 +490,11 @@ class _Welcome extends StatelessWidget {
     icon: Icons.dashboard_customize_outlined,
     title: 'Point it at your project folder',
     text:
-        'Paste the project\'s master folder into ROOT PATH and press SET, pick it with BROWSE, or let FIND look on '
-        'every drive. The project is then indexed by itself in the background, so search is instant.',
+        'Pick the project\'s master folder, type or paste its path, or let FIND look on every drive. '
+        'The project is then indexed by itself in the background, so search is instant.',
     actions: [
-      Btn('BROWSE', icon: Icons.folder_open, kind: BtnKind.on, onTap: cmd.browse),
+      Btn('PICK THE FOLDER', icon: Icons.folder_open, kind: BtnKind.on, onTap: cmd.browse),
+      Btn('TYPE A PATH', icon: Icons.edit_note, onTap: cmd.typePath),
       Btn('FIND', icon: Icons.search, onTap: cmd.find),
       Btn('BRING IN v6 SETTINGS', icon: Icons.file_download_outlined, onTap: cmd.importV6),
     ],
@@ -478,9 +510,9 @@ class _RootMissing extends StatelessWidget {
     icon: Icons.folder_off_outlined,
     title: 'Root folder not found on this PC',
     text:
-        '${model.root}\n\nThe drive may not be connected, or the folder was moved. Use BROWSE or FIND, or pick another project.',
+        '${model.root}\n\nThe drive may not be connected, or the folder was moved. Pick the folder again, let FIND look for it, or switch to another project in the menu top left.',
     actions: [
-      Btn('BROWSE', icon: Icons.folder_open, kind: BtnKind.on, onTap: cmd.browse),
+      Btn('PICK THE FOLDER', icon: Icons.folder_open, kind: BtnKind.on, onTap: cmd.browse),
       Btn('FIND', icon: Icons.search, onTap: cmd.find),
       Btn('TRY AGAIN', icon: Icons.refresh, onTap: model.refresh),
     ],
@@ -509,7 +541,7 @@ class _Empty extends StatelessWidget {
       icon: Icons.create_new_folder_outlined,
       title: 'No folders in this project yet',
       text:
-          '${model.root}\n\nMake the standard modules (00_Admin … 99_Archive), or add your own folders and press SCAN.',
+          '${model.root}\n\nMake the standard modules (00_Admin … 99_Archive), or add your own folders and choose LIST → Scan.',
       actions: [
         Btn(
           'MAKE THE STANDARD FOLDERS',
@@ -517,7 +549,7 @@ class _Empty extends StatelessWidget {
           kind: BtnKind.on,
           onTap: cmd.offerStandardFolders,
         ),
-        Btn('SCAN', icon: Icons.refresh, onTap: cmd.scan),
+        Btn('SCAN FOR FOLDERS', icon: Icons.refresh, onTap: cmd.scan),
       ],
     );
   }

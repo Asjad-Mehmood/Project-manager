@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import '../core/disciplines.dart';
 import 'theme.dart';
 
-enum BtnKind { plain, on, amber }
+/// plain: v6.2's framed button; on: lit teal; amber: the main action; ghost: quiet, no frame
+/// until the mouse is over it (for the many secondary buttons, so the bars stay calm)
+enum BtnKind { plain, on, amber, ghost }
 
 /// .btn, .btn.on and .btn.am, with the glow when the mouse is over them
 class Btn extends StatefulWidget {
@@ -19,10 +21,14 @@ class Btn extends StatefulWidget {
     this.tip,
     this.small = false,
     this.lit = false,
+    this.trailing,
   });
 
   final String label;
   final IconData? icon;
+
+  /// After the label: ▾ on a button that opens a menu
+  final IconData? trailing;
   final VoidCallback? onTap;
   final BtnKind kind;
   final String? tip;
@@ -41,13 +47,18 @@ class _BtnState extends State<Btn> {
 
   @override
   Widget build(BuildContext context) {
-    final kind = widget.lit ? BtnKind.on : widget.kind;
+    final ghost = widget.kind == BtnKind.ghost;
+    final kind = widget.lit && !ghost ? BtnKind.on : widget.kind;
     final enabled = widget.onTap != null;
     final hot = enabled && (_hover || _focus);
     Gradient? g;
     Color bg, fg, edge;
     List<BoxShadow>? glow;
-    if (hot && kind == BtnKind.amber) {
+    if (ghost) {
+      bg = widget.lit ? const Color(0x3313A8A8) : (hot ? const Color(0x2213A8A8) : Colors.transparent);
+      fg = widget.lit || hot ? C.tealHi : C.btnText;
+      edge = widget.lit ? C.teal.withValues(alpha: .7) : (hot ? C.fieldEdge : Colors.transparent);
+    } else if (hot && kind == BtnKind.amber) {
       bg = C.amber;
       fg = const Color(0xFF241A00);
       edge = C.amberHi;
@@ -76,7 +87,10 @@ class _BtnState extends State<Btn> {
     final size = widget.small ? 10.0 : 11.0;
     Widget b = AnimatedContainer(
       duration: const Duration(milliseconds: 90),
-      padding: EdgeInsets.symmetric(horizontal: widget.small ? 8 : 11, vertical: widget.small ? 2 : 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.label.isEmpty ? 6 : (widget.small ? 8 : 11),
+        vertical: widget.small ? 2 : 4,
+      ),
       decoration: BoxDecoration(
         color: g == null ? bg : null,
         gradient: g,
@@ -92,6 +106,10 @@ class _BtnState extends State<Btn> {
             if (widget.label.isNotEmpty) const SizedBox(width: 4),
           ],
           if (widget.label.isNotEmpty) Text(widget.label, style: t(size, color: fg, ls: .5, h: 1.25)),
+          if (widget.trailing != null) ...[
+            const SizedBox(width: 2),
+            Icon(widget.trailing, size: size + 4, color: fg.withValues(alpha: .8)),
+          ],
         ],
       ),
     );
@@ -110,7 +128,10 @@ class _BtnState extends State<Btn> {
       },
       child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: widget.onTap, child: b),
     );
-    b = Padding(padding: const EdgeInsets.only(left: 5), child: b); // v6.2's margin-left:5px
+    b = Padding(
+      padding: EdgeInsets.only(left: ghost ? 2 : 5),
+      child: b,
+    ); // v6.2's margin-left:5px
     final tip = widget.tip;
     return Semantics(
       button: true,
@@ -401,6 +422,42 @@ class _HoverState extends State<Hover> {
 }
 
 /// One of the six VIEW buttons: a little picture of the layout
+/// The little picture of a layout, for the VIEW menu
+class LayoutPicture extends StatelessWidget {
+  const LayoutPicture(this.n, {super.key, this.on = false});
+  final int n;
+  final bool on;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 30,
+    height: 22,
+    decoration: BoxDecoration(
+      color: on ? const Color(0xFF0E4F55) : C.btnBottom,
+      border: Border.all(color: on ? C.tealEdge : C.fieldEdge),
+      borderRadius: BorderRadius.circular(3),
+    ),
+    child: Stack(
+      children: [
+        for (final r in LayoutIcon._parts[n])
+          Positioned(
+            left: r[0].toDouble(),
+            top: r[1].toDouble(),
+            width: r[2].toDouble(),
+            height: r[3].toDouble(),
+            child: Container(
+              decoration: BoxDecoration(
+                color: r[4] == 1
+                    ? (on ? C.amberHi : C.amber)
+                    : (on ? const Color(0xFF9FD8D8) : const Color(0xFF4F7A96)),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
 class LayoutIcon extends StatelessWidget {
   const LayoutIcon(this.n, {super.key, required this.on, required this.onTap, required this.tip});
   final int n;
@@ -481,21 +538,38 @@ class LayoutIcon extends StatelessWidget {
   );
 }
 
-/// A button that opens a menu under itself; each item carries what it does
+/// Opens [items] as a menu just under the widget of [ctx]; runs the one picked
+Future<void> showMenuBelow(BuildContext ctx, List<PopupMenuEntry<VoidCallback>> items) async {
+  final box = ctx.findRenderObject()! as RenderBox;
+  final overlay = Overlay.of(ctx).context.findRenderObject()! as RenderBox;
+  final at = box.localToGlobal(Offset(0, box.size.height + 2), ancestor: overlay);
+  final f = await showMenu<VoidCallback>(
+    context: ctx,
+    position: RelativeRect.fromRect(at & const Size(1, 1), Offset.zero & overlay.size),
+    items: items,
+  );
+  f?.call();
+}
+
+/// A button that opens a menu under itself (with a ▾); each item carries what it does
 class MenuBtn extends StatelessWidget {
   const MenuBtn(
     this.label, {
     super.key,
-    this.icon = Icons.arrow_drop_down,
+    this.icon,
     required this.items,
     this.tip,
     this.lit = false,
+    this.kind = BtnKind.ghost,
+    this.caret = true,
   });
   final String label;
-  final IconData icon;
+  final IconData? icon;
   final List<PopupMenuEntry<VoidCallback>> Function() items;
   final String? tip;
   final bool lit;
+  final BtnKind kind;
+  final bool caret;
 
   @override
   Widget build(BuildContext context) => Builder(
@@ -504,20 +578,19 @@ class MenuBtn extends StatelessWidget {
       icon: icon,
       tip: tip,
       lit: lit,
-      onTap: () async {
-        final box = ctx.findRenderObject()! as RenderBox;
-        final overlay = Overlay.of(ctx).context.findRenderObject()! as RenderBox;
-        final at = box.localToGlobal(Offset(0, box.size.height + 2), ancestor: overlay);
-        final f = await showMenu<VoidCallback>(
-          context: ctx,
-          position: RelativeRect.fromRect(at & const Size(1, 1), Offset.zero & overlay.size),
-          items: items(),
-        );
-        f?.call();
-      },
+      kind: kind,
+      trailing: caret ? Icons.arrow_drop_down : null,
+      onTap: () => showMenuBelow(ctx, items()),
     ),
   );
 }
+
+/// A small heading inside a menu
+PopupMenuItem<VoidCallback> menuHeading(String text) => PopupMenuItem<VoidCallback>(
+  enabled: false,
+  height: 26,
+  child: Text(text, style: t(10, color: C.label, ls: 1.3)),
+);
 
 /// One line of a menu
 PopupMenuItem<VoidCallback> menuItem(
@@ -526,13 +599,23 @@ PopupMenuItem<VoidCallback> menuItem(
   IconData? icon,
   bool checked = false,
   String? sub,
+
+  /// A switch: drawn as a tick box, ticked when on
+  bool? on,
 }) => PopupMenuItem<VoidCallback>(
   value: onTap,
   enabled: onTap != null,
   height: sub == null ? 30 : 40,
   child: Row(
     children: [
-      SizedBox(width: 22, child: Icon(checked ? Icons.check : icon, size: 15, color: onTap == null ? C.muted : C.teal)),
+      SizedBox(
+        width: 22,
+        child: Icon(
+          on != null ? (on ? Icons.check_box : Icons.check_box_outline_blank) : (checked ? Icons.check : icon),
+          size: 15,
+          color: onTap == null ? C.muted : C.teal,
+        ),
+      ),
       const SizedBox(width: 6),
       Flexible(
         child: Column(

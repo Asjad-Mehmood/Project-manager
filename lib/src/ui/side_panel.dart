@@ -73,63 +73,9 @@ class _SidePanelState extends State<SidePanel> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _head(path),
-                    _bar(C.tools, [
-                      Btn('', icon: Icons.arrow_back, tip: 'Back  (Alt+Left)', onTap: m.canBack ? m.panelBack : null),
-                      Btn(
-                        '',
-                        icon: Icons.arrow_forward,
-                        tip: 'Forward  (Alt+Right)',
-                        onTap: m.canForward ? m.panelForward : null,
-                      ),
-                      Btn('UP', icon: Icons.arrow_upward, tip: 'The folder above  (Backspace)', onTap: m.panelUp),
-                      Btn('', icon: Icons.refresh, tip: 'Read this folder again  (F5)', onTap: m.refreshPanel),
-                      Btn('FOLDER', icon: Icons.add, tip: 'New folder here', onTap: () => cmd.newFolder()),
-                      Btn('RENAME', icon: Icons.edit, tip: 'Rename the selected item  (F2)', onTap: () => cmd.rename()),
-                      Btn(
-                        'PATH',
-                        icon: Icons.content_copy,
-                        tip: 'Copy this folder\'s path',
-                        onTap: () => cmd.copyText(path, 'path copied: $path'),
-                      ),
-                      Btn(
-                        'LIST / EDIT',
-                        icon: Icons.list,
-                        kind: BtnKind.on,
-                        tip: 'The names in a box you can copy, or edit to rename many at once',
-                        onTap: cmd.listAndEdit,
-                      ),
-                      Btn(
-                        'UNDO',
-                        icon: Icons.undo,
-                        tip: m.lastUndo == null ? 'Nothing to undo' : 'Undo ${m.lastUndo!.label}  (Ctrl+Z)',
-                        onTap: m.lastUndo == null ? null : cmd.undo,
-                      ),
-                    ]),
-                    _bar(C.tools2, [
-                      Btn('ALL', icon: Icons.check_box_outline_blank, tip: 'Ctrl+A', onTap: m.selectAll),
-                      Btn('NONE', icon: Icons.check_box_outline_blank, tip: 'Esc', onTap: m.selectNone),
-                      Btn('COPY', icon: Icons.copy, kind: BtnKind.on, tip: 'Ctrl+C', onTap: () => cmd.copy()),
-                      Btn('CUT', icon: Icons.content_cut, kind: BtnKind.on, tip: 'Ctrl+X', onTap: () => cmd.cut()),
-                      Btn(
-                        'PASTE',
-                        icon: Icons.content_paste,
-                        kind: BtnKind.amber,
-                        tip: 'Ctrl+V',
-                        onTap: () => cmd.paste(),
-                      ),
-                      const SizedBox(width: 12),
-                      Btn('RENAME', icon: Icons.edit, tip: 'F2', onTap: () => cmd.rename()),
-                      Btn(
-                        'DELETE',
-                        icon: Icons.delete_outline,
-                        tip: 'Delete key: to the Recycle Bin',
-                        onTap: () => cmd.delete(),
-                      ),
-                      const SizedBox(width: 12),
-                      Lbl(sel == 0 ? 'nothing selected' : '${plural(sel, 'item')} selected'),
-                    ]),
+                    _navBar(box.maxWidth),
+                    _actionBar(items.length, nd, nf, sel),
                     if (m.clip.isNotEmpty) _clipBar(),
-                    _filters(items.length, nd, nf, box.maxWidth),
                   ],
                 ),
               ),
@@ -201,24 +147,164 @@ class _SidePanelState extends State<SidePanel> {
           ),
           Btn(
             '',
+            icon: Icons.content_copy,
+            kind: BtnKind.ghost,
+            tip: 'Copy this folder\'s path',
+            onTap: () => cmd.copyText(path, 'path copied: $path'),
+          ),
+          Btn(
+            '',
             icon: pinned ? Icons.star : Icons.star_border,
+            kind: BtnKind.ghost,
+            lit: pinned,
             tip: pinned ? 'Unpin this folder' : 'Pin this folder for quick access',
             onTap: () => m.togglePin(path),
           ),
-          Btn('', icon: Icons.close, tip: 'Close the panel', onTap: m.closePanel),
+          Btn('', icon: Icons.close, kind: BtnKind.ghost, tip: 'Close the panel  (Alt+1)', onTap: m.closePanel),
         ],
       ),
     );
   }
 
-  Widget _bar(Color bg, List<Widget> children) => Container(
-    padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
-    decoration: BoxDecoration(
-      color: bg,
-      border: const Border(bottom: BorderSide(color: C.toolsEdge)),
-    ),
-    child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, runSpacing: 5, children: children),
-  );
+  /// Getting around: back, forward, up, read again; then find, show and sort
+  Widget _navBar(double w) {
+    Widget nav(IconData i, String tip, VoidCallback? f) => Btn('', icon: i, kind: BtnKind.ghost, tip: tip, onTap: f);
+    final filtered = m.show != Show.all || m.panelType.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+      decoration: const BoxDecoration(
+        color: C.tools,
+        border: Border(bottom: BorderSide(color: C.toolsEdge)),
+      ),
+      child: Row(
+        children: [
+          nav(Icons.arrow_back, 'Back  (Alt+Left)', m.canBack ? m.panelBack : null),
+          nav(Icons.arrow_forward, 'Forward  (Alt+Right)', m.canForward ? m.panelForward : null),
+          nav(Icons.arrow_upward, 'The folder above  (Backspace)', m.panelUp),
+          nav(Icons.refresh, 'Read this folder again  (F5)', m.refreshPanel),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Field(
+              controller: widget.filter,
+              hint: 'Filter this folder',
+              onChanged: m.setPanelFilter,
+              onEscape: () {
+                widget.filter.clear();
+                m.setPanelFilter('');
+              },
+            ),
+          ),
+          MenuBtn(
+            w < 520 ? '' : (filtered ? 'SHOWING SOME' : 'SHOW'),
+            icon: Icons.filter_list,
+            lit: filtered,
+            tip: 'Folders, files, or one type of file',
+            items: () => [
+              for (final x in Show.values) menuItem(x.label, () => m.setShow(x), checked: m.show == x),
+              const PopupMenuDivider(height: 8),
+              menuHeading('TYPE OF FILE'),
+              menuItem('All types', () => m.setPanelType(''), checked: m.panelType.isEmpty),
+              for (final ty in m.panelTypes()) menuItem(ty, () => m.setPanelType(ty), checked: m.panelType == ty),
+            ],
+          ),
+          MenuBtn(
+            w >= 520 ? 'SORT' : '',
+            icon: Icons.sort,
+            tip: 'Sort by ${m.sortBy.label.toLowerCase()}${m.sortDown ? ', reversed' : ''}',
+            items: () => [
+              for (final x in SortBy.values)
+                menuItem(
+                  x.label,
+                  () => m.setSort(x),
+                  checked: m.sortBy == x,
+                  sub: m.sortBy == x
+                      ? (m.sortDown ? 'reversed: pick again for the usual order' : 'pick again to reverse')
+                      : null,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// What you can do now: with a selection, its jobs; without, the folder's
+  Widget _actionBar(int shown, int nd, int nf, int sel) {
+    final undo = m.lastUndo;
+    final List<Widget> left, right;
+    if (sel > 0) {
+      left = [
+        Text(
+          plural(sel, 'item'),
+          style: t(12, color: C.amber, w: FontWeight.bold),
+        ),
+        Text('  selected', style: t(12, color: C.soft)),
+        Btn('', icon: Icons.close, kind: BtnKind.ghost, small: true, tip: 'Select none  (Esc)', onTap: m.selectNone),
+      ];
+      right = [
+        Btn('COPY', icon: Icons.copy, kind: BtnKind.ghost, tip: 'Ctrl+C', onTap: () => cmd.copy()),
+        Btn('CUT', icon: Icons.content_cut, kind: BtnKind.ghost, tip: 'Ctrl+X', onTap: () => cmd.cut()),
+        if (sel == 1) Btn('RENAME', icon: Icons.edit, kind: BtnKind.ghost, tip: 'F2', onTap: () => cmd.rename()),
+        Btn(
+          'DELETE',
+          icon: Icons.delete_outline,
+          kind: BtnKind.ghost,
+          tip: 'To the Recycle Bin  (Delete)',
+          onTap: () => cmd.delete(),
+        ),
+      ];
+    } else {
+      left = [
+        Text(
+          shown == nd + nf ? '${plural(nd, 'folder')}, ${plural(nf, 'file')}' : '$shown of ${nd + nf} shown',
+          style: t(11, color: C.label, ls: .3),
+        ),
+        Btn('SELECT ALL', kind: BtnKind.ghost, small: true, tip: 'Ctrl+A', onTap: shown == 0 ? null : m.selectAll),
+      ];
+      right = [
+        Btn('NEW FOLDER', icon: Icons.create_new_folder_outlined, kind: BtnKind.ghost, onTap: () => cmd.newFolder()),
+        Btn(
+          'LIST / EDIT',
+          icon: Icons.list,
+          kind: BtnKind.ghost,
+          tip: 'The names in a box you can copy, or edit to rename many at once',
+          onTap: cmd.listAndEdit,
+        ),
+        Btn(
+          'EXPLORER',
+          icon: Icons.bolt,
+          kind: BtnKind.amber,
+          small: true,
+          tip: 'Open this folder in Explorer',
+          onTap: () => cmd.open(m.panelPath!),
+        ),
+      ];
+    }
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 4, 10, 4),
+      constraints: const BoxConstraints(minHeight: 36),
+      decoration: const BoxDecoration(
+        color: C.tools2,
+        border: Border(bottom: BorderSide(color: C.toolsEdge)),
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        runSpacing: 4,
+        children: [
+          Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: left),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ...right,
+              if (undo != null)
+                Btn('', icon: Icons.undo, kind: BtnKind.ghost, tip: 'Undo ${undo.label}  (Ctrl+Z)', onTap: cmd.undo),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _clipBar() {
     final c = m.clip;
@@ -238,61 +324,25 @@ class _SidePanelState extends State<SidePanel> {
           Expanded(
             child: Text(
               '${plural(c.length, 'item')}  ·  ${c.first.name}${c.length > 1 ? ' and ${c.length - 1} more' : ''}  ·  '
-              'press PASTE in the folder you want them in',
+              'go to the folder you want them in',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: t(11, color: C.softer),
             ),
           ),
-          Btn('clear', small: true, onTap: m.clearClip),
+          Btn(
+            'PASTE HERE',
+            icon: Icons.content_paste,
+            kind: BtnKind.amber,
+            small: true,
+            tip: 'Ctrl+V',
+            onTap: () => cmd.paste(),
+          ),
+          Btn('', icon: Icons.close, kind: BtnKind.ghost, small: true, tip: 'Empty the clipboard', onTap: m.clearClip),
         ],
       ),
     );
   }
-
-  Widget _filters(int shown, int nd, int nf, double w) => Container(
-    padding: const EdgeInsets.fromLTRB(14, 6, 14, 7),
-    decoration: const BoxDecoration(
-      color: C.tools,
-      border: Border(bottom: BorderSide(color: C.toolsEdge)),
-    ),
-    child: Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        Btn('EXPLORER', icon: Icons.bolt, kind: BtnKind.amber, onTap: () => cmd.open(m.panelPath!)),
-        Field(
-          controller: widget.filter,
-          width: (w * .3).clamp(140, 260),
-          hint: 'filter this folder',
-          onChanged: m.setPanelFilter,
-          onEscape: () {
-            widget.filter.clear();
-            m.setPanelFilter('');
-          },
-        ),
-        Select<Show>(value: m.show, items: Show.values, label: (s) => s.label, onChanged: m.setShow, width: 125),
-        Select<String>(
-          value: m.panelType,
-          items: ['', ...m.panelTypes()],
-          label: (x) => x.isEmpty ? 'All types' : x,
-          onChanged: m.setPanelType,
-          width: 110,
-        ),
-        Select<SortBy>(
-          value: m.sortBy,
-          items: SortBy.values,
-          label: (s) => 'Sort: ${s.label}',
-          onChanged: m.setSort,
-          width: 150,
-          tip: 'Pick the same one again to reverse the order',
-        ),
-        if (m.sortDown) const Icon(Icons.south, size: 14, color: C.label),
-        Lbl('$shown shown  ·  ${plural(nd, 'folder')}, ${plural(nf, 'file')}'),
-      ],
-    ),
-  );
 }
 
 /// The path, each part clickable: D:\  Project  10_Survey
@@ -403,6 +453,7 @@ class _RowState extends State<_Row> {
                   'OPEN',
                   icon: Icons.bolt,
                   small: true,
+                  kind: BtnKind.ghost,
                   tip: e.isDir ? 'Open this folder in Explorer' : 'Open this file',
                   onTap: () => widget.cmd.open(e.path),
                 ),

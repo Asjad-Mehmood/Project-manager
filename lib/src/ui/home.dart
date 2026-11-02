@@ -29,12 +29,10 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   late final cmd = Commands(widget.model, () => context);
-  final _root = TextEditingController();
   final _search = TextEditingController();
   final _filter = TextEditingController();
   final _searchFocus = FocusNode();
   final _keys = FocusNode(debugLabel: 'window');
-  String _shownRoot = '';
   String? _shownPanel;
 
   AppModel get m => widget.model;
@@ -49,10 +47,6 @@ class _HomeState extends State<Home> {
 
   /// Fields follow the model when the project or the panel's folder changes
   void _sync() {
-    if (m.root != _shownRoot) {
-      _shownRoot = m.root;
-      _root.text = m.root;
-    }
     if (m.panelPath != _shownPanel) {
       _shownPanel = m.panelPath;
       if (_filter.text.isNotEmpty) _filter.clear();
@@ -62,7 +56,7 @@ class _HomeState extends State<Home> {
   @override
   void dispose() {
     m.removeListener(_sync);
-    for (final c in [_root, _search, _filter]) {
+    for (final c in [_search, _filter]) {
       c.dispose();
     }
     _searchFocus.dispose();
@@ -168,7 +162,6 @@ class _HomeState extends State<Home> {
                       Toolbar(
                         model: m,
                         cmd: cmd,
-                        rootField: _root,
                         searchField: _search,
                         searchFocus: _searchFocus,
                         onCheckUpdates: () => widget.onCheckUpdates?.call(context),

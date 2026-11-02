@@ -22,17 +22,20 @@ on the Desktop, in Downloads, Documents or the Survey Toolkit's folder); otherwi
 *Bring in settings from v6*, or just paste the project folder into ROOT PATH and press SET.
 
 ## Use
+One row under the banner holds everything; the less-used options sit in its menus.
+
 | | |
 |---|---|
-| **ROOT PATH / SET / BROWSE / FIND** | Open a project. FIND looks on every drive for folders holding numbered modules. The clock icon switches between your projects. |
-| **Modules** | Click a name or VIEW to see it in the panel, OPEN or double-click for Explorer, the arrow for its sub-folders, the coloured chip to change its discipline. Right-click for more. |
-| **SEARCH, DEEP, DISCIPLINE** | Without DEEP the box filters module names; with DEEP it searches every indexed folder and file. Every word must be in the name. |
-| **INDEX / STOP** | The project indexes itself in the background (⋯ to turn that off). INDEX reads this project, the whole drive or all drives; STOP keeps what was found. |
-| **Panel** | Click, Ctrl+click, Shift+click or the arrow keys to select. COPY, CUT, PASTE, RENAME (F2), DELETE (to the Recycle Bin), UNDO (Ctrl+Z). Drag items onto any folder. Double-click a folder to go in, Backspace to go up, Alt+Left / Right for back and forward. |
+| **Project ▾** (top left) | Your projects, to switch between them. Open a project: pick its folder, type or paste its path, or FIND projects on every drive. This project: open the root in Explorer, rename it, take it off the list. |
+| **Search, DEEP, Discipline** | Without DEEP the box filters module names; with DEEP it searches every indexed folder and file (every word must be in the name). Esc clears it. |
+| **LIST ▾** | Always open the whole tree, hide missing modules, collapse; Scan, Fix names, Rebuild, Refresh (F5). |
+| **INDEX ▾** | Index this project, the whole drive or all drives; Stop keeps what was found. The project also indexes itself in the background. |
+| **GO TO ▾** | Pinned folders (right-click any folder → Pin), every drive, and the drives strip. |
+| **View ▾** | The six layouts, Alt+1 to Alt+6. |
+| **⋯** | Bring in v6 settings, look for an update, keyboard shortcuts, about. |
+| **Modules** | Click a name or VIEW for the panel, OPEN or double-click for Explorer, the arrow for its sub-folders, the coloured chip for its discipline. Right-click for more. |
+| **Panel** | Back, forward, up, filter, Show ▾ and Sort ▾ on top. Below, what you can do now: New folder, LIST / EDIT and Explorer; or, once something is selected, Copy, Cut, Rename and Delete. Paste appears when something is copied. Drag items onto any folder. UNDO (Ctrl+Z). |
 | **LIST / EDIT** | The names in a box to copy, or to edit and rename many at once, with a preview and quick tools (find and replace, add text, number, case). |
-| **VIEW** | Six layouts, Alt+1 to Alt+6: tree only, three side-by-side splits, above and below, panel only. |
-| **SCAN / REBUILD / FIX NAMES / MISSING** | Keep the module list in step with the disk. |
-| **DRIVES, PINNED** | Every drive with its free space; folders pinned for quick access (right-click → Pin). |
 
 Settings live in `%APPDATA%\Excel to KML\Project Folder Manager\settings.json`, the index in
 `%LOCALAPPDATA%\Excel to KML\Project Folder Manager\index`.
