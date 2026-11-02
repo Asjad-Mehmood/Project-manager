@@ -1,0 +1,106 @@
+name: Check
+
+# On every push and pull request: the code is formatted, the lints pass and every test passes;
+# then on Windows the program and its installer are built, installed, checked doing the real jobs
+# (drives, Recycle Bin, copy / move / rename / undo, index), opened, and uninstalled. Nothing is
+# published. The test installer is kept for 14 days under the run's Artifacts, to try before a
+# release.
+on:
+  push:
+    branches-ignore:
+      - 'dependabot/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.47.7'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Formatted
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Lints
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      # pictures of the window, to look at: Actions -> this run -> Artifacts
+      - name: Screenshots
+        run: flutter test test/ui_test.dart --dart-define=SHOTS=true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: docs/screenshots
+          retention-days: 14
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # the tests on Windows too: paths, names and case work differently there
+      - name: Tests on Windows
+        run: |
+          flutter pub get
+          flutter test
+
+      - name: Build the Windows program
+        shell: pwsh
+        run: |
+          flutter build windows --release --dart-define=NO_UPDATE_CHECK=true
+          if (-not (Test-Path build\windows\x64\runner\Release\ProjectFolderManager.exe)) { throw "ProjectFolderManager.exe was not built" }
+          foreach ($dll in 'msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll') {
+            Copy-Item "C:\Windows\System32\$dll" build\windows\x64\runner\Release\
+          }
+
+      - name: Build the installer
+        shell: pwsh
+        working-directory: installer
+        run: |
+          if (-not (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=0.0.0 installer.nsi
+          if (-not (Test-Path ProjectFolderManager-Setup.exe)) { throw "The installer was not made" }
+
+      - name: Install, self-check, open and uninstall the program
+        shell: pwsh
+        run: pwsh tool/windows_check.ps1 installer\ProjectFolderManager-Setup.exe shots
+
+      - name: Keep the screenshot and the self-check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-check
+          path: shots
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # to try before a release: Actions -> this run -> Artifacts. It doesn't look for updates.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ProjectFolderManager-Setup-test
+          path: installer/ProjectFolderManager-Setup.exe
+          retention-days: 14

@@ -1,0 +1,105 @@
+name: Build and Release
+
+# Runs when you push a tag such as v7.0.1 (publishing a GitHub release with a new tag does this).
+#
+# This repository is public, so its releases are too: every installed copy reads latest.json and
+# the installer from this repository's latest release. The release description comes from
+# docs/releases/<tag>.md. A release is never made by hand: the files are built here, from the
+# tagged code, and checked after publishing exactly the way installed copies download them.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.47.7'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from tag
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          if ($ver -notmatch '^\d+\.\d+\.\d+$') { throw "A release tag is v and three numbers, for example v7.0.1. Got: ${{ github.ref_name }}" }
+          "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: The release notes are there
+        shell: bash
+        run: test -f "docs/releases/${GITHUB_REF_NAME}.md" || { echo "Write docs/releases/${GITHUB_REF_NAME}.md first"; exit 1; }
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Tests
+        run: |
+          flutter pub get
+          flutter test
+
+      - name: Build the program
+        shell: pwsh
+        run: |
+          flutter build windows --release --build-name=$env:VERSION --build-number=${{ github.run_number }} --dart-define=APP_VERSION=$env:VERSION
+          # the Microsoft C++ runtime goes next to the program, so nothing else has to be installed
+          foreach ($dll in 'msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll') {
+            Copy-Item "C:\Windows\System32\$dll" build\windows\x64\runner\Release\
+          }
+
+      - name: Build the installer
+        shell: pwsh
+        working-directory: installer
+        run: |
+          if (-not (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+          & "C:\Program Files (x86)\NSIS\makensis.exe" "/DVERSION=$env:VERSION" installer.nsi
+          if (-not (Test-Path ProjectFolderManager-Setup.exe)) { throw "The installer was not made" }
+
+      # the same check as on every push, on the very installer about to be published
+      - name: Install, self-check, open and uninstall
+        shell: pwsh
+        run: pwsh tool/windows_check.ps1 installer\ProjectFolderManager-Setup.exe shots
+
+      - name: Write latest.json
+        shell: pwsh
+        working-directory: installer
+        run: |
+          $h = (Get-FileHash ProjectFolderManager-Setup.exe -Algorithm SHA256).Hash.ToLower()
+          '{"version":"' + $env:VERSION + '","sha256":"' + $h + '"}' | Set-Content latest.json -Encoding ascii
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Project Folder Manager ${{ github.ref_name }}
+          body_path: docs/releases/${{ github.ref_name }}.md
+          make_latest: true
+          files: |
+            installer/ProjectFolderManager-Setup.exe
+            installer/latest.json
+
+  # Download the published release the way installed copies do: latest.json, then the installer,
+  # checked against its SHA-256. A failure here means installed copies cannot update.
+  verify:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and verify the release
+        run: |
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download"
+          want="${GITHUB_REF_NAME#v}"
+          for i in 1 2 3 4 5; do
+            if curl -fsSL "$base/latest.json" -o latest.json && grep -q "\"version\":\"$want\"" latest.json; then
+              sha=$(sed -E 's/.*"sha256":"([0-9a-f]{64})".*/\1/' latest.json)
+              curl -fsSL "$base/ProjectFolderManager-Setup.exe" -o setup.exe
+              echo "$sha  setup.exe" | sha256sum -c - && exit 0
+            fi
+            echo "Not available yet; trying again in 30 s"; sleep 30
+          done
+          exit 1

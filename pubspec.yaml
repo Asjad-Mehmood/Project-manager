@@ -1,0 +1,25 @@
+name: project_folder_manager
+description: "Project Folder Manager by Excel to KML"
+publish_to: 'none'
+version: 7.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  crypto: ^3.0.8
+  ffi: ^2.1.0
+  file_selector: ^1.1.0
+  flutter:
+    sdk: flutter
+  http: ^1.6.0
+  path: ^1.9.1
+  win32: ^5.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
