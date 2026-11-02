@@ -6,14 +6,14 @@ abstract final class C {
   static const bg = Color(0xFF0B121C);
   static const text = Color(0xFFDCE6EE);
   static const white = Color(0xFFF4F8FB);
-  static const teal = Color(0xFF16B3AE);
-  static const tealHi = Color(0xFF5CE1DC);
-  static const tealEdge = Color(0xFF3CCFC9);
-  static const amber = Color(0xFFF5A524);
-  static const amberHi = Color(0xFFFFC860);
-  static const gold = Color(0xFFD99A2B);
-  static const red = Color(0xFFE8734A);
-  static const green = Color(0xFF5CB85C);
+  static const teal = Color(0xFF4FA6A1);
+  static const tealHi = Color(0xFF8CC9C5);
+  static const tealEdge = Color(0xFF6DB5B0);
+  static const amber = Color(0xFFCFA766);
+  static const amberHi = Color(0xFFDDBE88);
+  static const gold = Color(0xFFC4A06A);
+  static const red = Color(0xFFC98A76);
+  static const green = Color(0xFF87AE82);
   static const ink = Color(0xFF04121E); // text on a bright button
   static const label = Color(0xFF8297AA);
   static const muted = Color(0xFF64798D);
@@ -36,8 +36,8 @@ abstract final class C {
   static const btnTop = Color(0xFF172536);
   static const btnBottom = Color(0xFF172536);
   static const btnText = Color(0xFFCAD8E4);
-  static const onTop = Color(0xFF16B3AE);
-  static const onBottom = Color(0xFF16B3AE);
+  static const onTop = Color(0xFF4FA6A1);
+  static const onBottom = Color(0xFF4FA6A1);
 
   static const rowTop = Color(0xFF111B28);
   static const rowBottom = Color(0xFF111B28);
@@ -73,9 +73,9 @@ abstract final class C {
   static const driveStrip = Color(0xFF0D1520);
   static const driveStripEdge = Color(0xFF1A2737);
   static const barTrack = Color(0xFF0A1420);
-  static const barOk = Color(0xFF2F9F8F);
-  static const barMid = Color(0xFFC9A227);
-  static const barHot = Color(0xFFC0603C);
+  static const barOk = Color(0xFF5E9E95);
+  static const barMid = Color(0xFFBFA45E);
+  static const barHot = Color(0xFFB97E68);
 
   static const chipGrey = Color(0xFF3A4A58);
 }
@@ -119,7 +119,7 @@ ThemeData pfmTheme() {
   return base.copyWith(
     textSelectionTheme: const TextSelectionThemeData(
       cursorColor: C.teal,
-      selectionColor: Color(0x8013A8A8),
+      selectionColor: Color(0x664FA6A1),
       selectionHandleColor: C.teal,
     ),
     tooltipTheme: TooltipThemeData(

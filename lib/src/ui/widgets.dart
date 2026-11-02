@@ -54,22 +54,22 @@ class _BtnState extends State<Btn> {
     Gradient? g;
     Color bg, fg, edge;
     if (ghost) {
-      bg = widget.lit ? const Color(0x3313A8A8) : (hot ? const Color(0x2213A8A8) : Colors.transparent);
+      bg = widget.lit ? C.teal.withValues(alpha: .2) : (hot ? C.teal.withValues(alpha: .13) : Colors.transparent);
       fg = widget.lit || hot ? C.tealHi : C.btnText;
       edge = widget.lit ? C.teal.withValues(alpha: .7) : (hot ? C.fieldEdge : Colors.transparent);
     } else if (hot && kind == BtnKind.amber) {
-      bg = C.amber;
-      fg = const Color(0xFF241A00);
-      edge = C.amberHi;
-    } else if (hot) {
-      bg = C.teal;
-      fg = C.ink;
-      edge = C.tealEdge;
+      bg = C.amber.withValues(alpha: .2);
+      fg = C.amberHi;
+      edge = C.amber.withValues(alpha: .7);
     } else if (kind == BtnKind.on) {
-      bg = C.onTop;
-      g = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [C.onTop, C.onBottom]);
+      // the main action: a soft teal, a little brighter under the mouse
+      bg = hot ? C.tealEdge : C.onTop;
       fg = C.ink;
-      edge = C.tealEdge;
+      edge = hot ? C.tealHi : C.tealEdge;
+    } else if (hot) {
+      bg = C.teal.withValues(alpha: .16);
+      fg = C.tealHi;
+      edge = C.teal.withValues(alpha: .7);
     } else {
       bg = C.btnTop;
       g = const LinearGradient(
@@ -289,10 +289,14 @@ class DisciplineChip extends StatelessWidget {
         message: onTap == null ? discipline : 'Change the discipline',
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-          decoration: BoxDecoration(color: disciplineColor(discipline), borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(
+            color: disciplineColor(discipline).withValues(alpha: .16),
+            border: Border.all(color: disciplineColor(discipline).withValues(alpha: .35)),
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Text(
             discipline,
-            style: t(10, color: C.ink, w: FontWeight.bold, ls: .4),
+            style: t(10, color: Color.lerp(disciplineColor(discipline), C.white, .25)!, w: FontWeight.w600, ls: .3),
           ),
         ),
       ),
@@ -326,11 +330,15 @@ class ExtChip extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(minWidth: 40),
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-      decoration: BoxDecoration(color: c ?? C.chipGrey, borderRadius: BorderRadius.circular(3)),
+      decoration: BoxDecoration(
+        color: (c ?? C.chipGrey).withValues(alpha: .18),
+        border: Border.all(color: (c ?? C.chipGrey).withValues(alpha: .35)),
+        borderRadius: BorderRadius.circular(4),
+      ),
       child: Text(
         extLabel(fileName),
         textAlign: TextAlign.center,
-        style: t(9, color: c == null ? C.btnText : C.ink, w: FontWeight.bold, h: 1.5),
+        style: t(9, color: Color.lerp(c ?? C.btnText, C.white, .2)!, w: FontWeight.w600, h: 1.5),
       ),
     );
   }
@@ -394,7 +402,7 @@ class LayoutPicture extends StatelessWidget {
     width: 30,
     height: 22,
     decoration: BoxDecoration(
-      color: on ? const Color(0xFF0E4F55) : C.btnBottom,
+      color: on ? C.teal.withValues(alpha: .25) : C.btnBottom,
       border: Border.all(color: on ? C.tealEdge : C.fieldEdge),
       borderRadius: BorderRadius.circular(3),
     ),
@@ -408,9 +416,7 @@ class LayoutPicture extends StatelessWidget {
             height: r[3].toDouble(),
             child: Container(
               decoration: BoxDecoration(
-                color: r[4] == 1
-                    ? (on ? C.amberHi : C.amber)
-                    : (on ? const Color(0xFF9FD8D8) : const Color(0xFF4F7A96)),
+                color: r[4] == 1 ? (on ? C.amberHi : C.amber) : (on ? C.tealHi : const Color(0xFF5B7489)),
                 borderRadius: BorderRadius.circular(1),
               ),
             ),

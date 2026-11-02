@@ -412,7 +412,7 @@ class _ViewPicker extends StatelessWidget {
             margin: const EdgeInsets.only(left: 4),
             padding: const EdgeInsets.fromLTRB(5, 4, 1, 4),
             decoration: BoxDecoration(
-              color: h ? const Color(0x2216B3AE) : null,
+              color: h ? C.teal.withValues(alpha: .13) : null,
               border: Border.all(color: h ? C.fieldEdge : Colors.transparent),
               borderRadius: BorderRadius.circular(radius),
             ),

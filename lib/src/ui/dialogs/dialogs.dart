@@ -294,14 +294,15 @@ Future<String?> pickDiscipline(BuildContext context, String moduleName, String c
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                     decoration: BoxDecoration(
-                      color: disciplineColor(d),
-                      borderRadius: BorderRadius.circular(4),
-                      border: d == current ? Border.all(color: C.white, width: 2) : null,
-                      boxShadow: h ? const [BoxShadow(color: Color(0xFF99FFFF), blurRadius: 14)] : null,
+                      color: disciplineColor(d).withValues(alpha: h || d == current ? .3 : .16),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: d == current ? C.white.withValues(alpha: .8) : disciplineColor(d).withValues(alpha: .45),
+                      ),
                     ),
                     child: Text(
                       d,
-                      style: t(12, color: C.ink, w: FontWeight.bold),
+                      style: t(12, color: Color.lerp(disciplineColor(d), C.white, .3)!, w: FontWeight.w600),
                     ),
                   ),
                 ),
