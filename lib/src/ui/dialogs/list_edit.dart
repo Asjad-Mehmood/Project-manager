@@ -146,9 +146,9 @@ class _ListEditState extends State<_ListEdit> {
             end: Alignment.bottomCenter,
             colors: [C.barTop, C.panelBottom],
           ),
-          border: Border.all(color: C.teal, width: 2),
-          borderRadius: BorderRadius.circular(5),
-          boxShadow: const [BoxShadow(color: Colors.black, blurRadius: 40)],
+          border: Border.all(color: C.fieldEdge),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 30)],
         ),
         child: Column(
           children: [

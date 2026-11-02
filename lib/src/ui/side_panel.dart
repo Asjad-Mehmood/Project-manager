@@ -22,7 +22,7 @@ class SidePanel extends StatefulWidget {
   final Commands cmd;
   final TextEditingController filter;
 
-  /// Which side the teal edge is on: the panel's left (side by side) or top (above / below)
+  /// Which side the edge line is on: the panel's left (side by side) or top (above / below)
   final AxisDirection edge;
 
   @override
@@ -56,9 +56,9 @@ class _SidePanelState extends State<SidePanel> {
             colors: [C.panelTop, C.panelBottom],
           ),
           border: widget.edge == AxisDirection.left
-              ? const Border(left: BorderSide(color: C.teal, width: 2))
+              ? const Border(left: BorderSide(color: C.topEdge))
               : widget.edge == AxisDirection.up
-              ? const Border(top: BorderSide(color: C.teal, width: 2))
+              ? const Border(top: BorderSide(color: C.topEdge))
               : null,
           boxShadow: const [BoxShadow(color: Colors.black, blurRadius: 20, offset: Offset(-6, 0))],
         ),
@@ -272,7 +272,7 @@ class _SidePanelState extends State<SidePanel> {
         ),
         Btn(
           'EXPLORER',
-          icon: Icons.bolt,
+          icon: Icons.open_in_new,
           kind: BtnKind.amber,
           small: true,
           tip: 'Open this folder in Explorer',
@@ -451,7 +451,7 @@ class _RowState extends State<_Row> {
                 opacity: h || sel ? 1 : .58,
                 child: Btn(
                   'OPEN',
-                  icon: Icons.bolt,
+                  icon: Icons.open_in_new,
                   small: true,
                   kind: BtnKind.ghost,
                   tip: e.isDir ? 'Open this folder in Explorer' : 'Open this file',

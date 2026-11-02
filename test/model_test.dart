@@ -5,7 +5,6 @@ import 'package:path/path.dart' as p;
 import 'package:project_folder_manager/src/core/bulk_rename.dart';
 import 'package:project_folder_manager/src/core/file_ops.dart';
 import 'package:project_folder_manager/src/core/search_index.dart';
-import 'package:project_folder_manager/src/core/settings.dart';
 import 'package:project_folder_manager/src/state/app_model.dart';
 
 import 'fakes.dart';
@@ -21,38 +20,40 @@ void main() {
     return h.model..start();
   }
 
-  test('the first start brings in a v6.2 copy\'s settings from the Desktop', () {
+  test('a new setup opens nothing and offers a 6.2 copy\'s settings, which can be brought in', () {
     h = Harness.make();
     final home = p.join(h.base.path, 'home');
     final old = Directory(p.join(home, 'Desktop', 'Project Folder Manager'))..createSync(recursive: true);
-    File(p.join(old.path, 'Project_Folder_Manager_config.txt')).writeAsStringSync(
-      '${h.root.path}\n#PC=PC-1\n#TITLE=North Field\n#OPT=tree:0,deep:1,miss:0,depth:6,files:1,drv:0,lay:4\n'
-      '00_Admin|Admin\n10_Survey|HSE\n',
-    );
+    final cfg = File(p.join(old.path, 'Project_Folder_Manager_config.txt'))
+      ..writeAsStringSync(
+        '${h.root.path}\n#PC=PC-1\n#TITLE=North Field\n#OPT=tree:0,deep:1,miss:0,depth:6,files:1,drv:0,lay:4\n'
+        '00_Admin|Admin\n10_Survey|HSE\n',
+      );
     final m = h.model..start();
+    expect(m.project, isNull, reason: 'the start page asks for a drive or a folder');
+    expect(m.v6File?.path, cfg.path);
+    expect(m.importV6(cfg.path), isNull);
     expect(m.root, h.root.path);
     expect(m.title, 'North Field');
     expect(m.options.layout, 4);
-    expect(m.project!.modules.firstWhere((x) => x.name == '10_Survey').discipline, 'HSE');
-    expect(m.settings.v6Checked, isTrue);
-    // saved: a second start reads v7's own settings
+    expect(m.modules.firstWhere((x) => x.name == '10_Survey').discipline, 'HSE');
+    // saved: a second start opens it again
     final again = AppModel(store: h.store, shell: h.shell, env: const {})..start();
     expect(again.title, 'North Field');
     again.dispose();
   });
 
-  test('SET opens a project; its modules come from the disk with guessed disciplines', () {
+  test('a folder opens; its folders come from the disk with guessed disciplines', () {
     final m = started();
     expect(m.project, isNull);
     expect(m.setRoot(p.join(h.base.path, 'nope')), contains('does not exist'));
     expect(m.setRoot(h.root.path), isNull);
     expect(
-      [for (final x in m.project!.modules) x.name],
+      [for (final x in m.modules) x.name],
       ['00_Admin', '10_Survey', '20_Piping', '30_Electrical', '50_Civil Works', '99_Archive'],
     );
-    expect(m.project!.modules[4].discipline, 'Civil Works');
-    expect(m.kpis, (6, 6, 0, 0));
-    expect(m.title, 'PROJECT FOLDER MANAGER');
+    expect(m.modules[4].discipline, 'Civil Works');
+    expect(m.title, 'Project', reason: 'the folder\'s own name');
     m.setTitle('  North Field ');
     expect(m.title, 'North Field');
   });
@@ -74,40 +75,54 @@ void main() {
     expect(Directory(other.path).existsSync(), isTrue);
   });
 
-  test('a list that came from another PC is rebuilt quietly, keeping disciplines', () {
+  test('the list follows the disk by itself: nothing to scan or rebuild', () async {
     h = Harness.make();
     final json =
-        '{"v6Checked": true, "options": {"autoIndex": false}, "projects": [{"root": ${_q(h.root.path)}, "pc": "OLD-PC", '
+        '{"options": {"autoIndex": false}, "projects": [{"root": ${_q(h.root.path)}, "pc": "OLD-PC", '
         '"modules": [["10_Survey", "HSE"], ["Gone", "Admin"]]}]}';
     Directory(h.store.settingsDir).createSync(recursive: true);
     File(p.join(h.store.settingsDir, 'settings.json')).writeAsStringSync(json);
     final m = h.model..start();
-    expect(m.project!.modules, hasLength(6));
-    expect(m.project!.modules.firstWhere((x) => x.name == '10_Survey').discipline, 'HSE');
+    expect(m.modules, hasLength(6), reason: 'only what is on the disk');
+    expect(m.modules.firstWhere((x) => x.name == '10_Survey').discipline, 'HSE', reason: 'a chosen discipline is kept');
     expect(m.project!.pc, 'PC-1');
-  });
 
-  test('SCAN, FIX NAMES, make missing folders, the standard folders', () async {
-    final m = started()..setRoot(h.root.path);
+    // made, renamed and deleted in Explorer
     Directory(h.at('40_Telecom')).createSync();
-    expect(m.scan(), ['40_Telecom']);
-    Directory(h.at('40_Telecom')).renameSync(h.at('40 Telecom'));
-    final r = m.fixNames();
-    expect(r.fixed.single.$2, '40 Telecom');
+    Directory(h.at('20_Piping')).renameSync(h.at('20 Pipelines'));
     Directory(h.at('99_Archive')).deleteSync(recursive: true);
-    expect(m.kpis.$4, 1);
-    expect(await m.createMissing(), isEmpty);
-    expect(Directory(h.at('99_Archive')).existsSync(), isTrue);
+    var told = 0;
+    m.addListener(() => told++);
+    expect(m.checkDisk(), isTrue);
+    expect(told, 1);
+    expect(
+      [for (final x in m.modules) x.name],
+      ['00_Admin', '10_Survey', '20 Pipelines', '30_Electrical', '40_Telecom', '50_Civil Works'],
+    );
+    expect(m.modules.firstWhere((x) => x.name == '40_Telecom').discipline, 'Telecom');
+    expect(m.checkDisk(), isFalse, reason: 'nothing changed since');
+
+    // a discipline chosen for a folder that wasn't chosen before is remembered
+    m.setDiscipline('40_Telecom', 'HSE');
+    expect(m.modules.firstWhere((x) => x.name == '40_Telecom').discipline, 'HSE');
 
     final empty = Directory(p.join(h.base.path, 'Empty'))..createSync();
     m.setRoot(empty.path);
-    expect(m.project!.modules, isEmpty);
+    expect(m.modules, isEmpty);
     expect(await m.createStandardFolders(), isEmpty);
-    expect(m.project!.modules, hasLength(11));
-    expect(m.project!.modules.last.name, '99_Archive');
+    expect(m.modules, hasLength(11));
+    expect(m.modules.last.name, '99_Archive');
   });
 
-  test('module filters: search, discipline, MISSING', () {
+  test('at the top of a drive, Windows\' own folders are left out', () {
+    h = Harness.make();
+    expect(shownAtTop(r'$RECYCLE.BIN', atDrive: true), isFalse);
+    expect(shownAtTop('System Volume Information', atDrive: true), isFalse);
+    expect(shownAtTop('Projects', atDrive: true), isTrue);
+    expect(shownAtTop('System Volume Information', atDrive: false), isTrue, reason: 'inside a folder, all show');
+  });
+
+  test('folder filters: search and discipline', () {
     final m = started()..setRoot(h.root.path);
     m.setQuery('surv');
     expect(m.moduleRows().single.module.name, '10_Survey');
@@ -115,9 +130,6 @@ void main() {
     m.filterDiscipline('Piping');
     expect(m.moduleRows().single.module.name, '20_Piping');
     m.filterDiscipline('');
-    m.project!.modules.add(Module('77_Nowhere', 'Admin'));
-    expect(m.moduleRows(), hasLength(7));
-    m.setHideMissing(true);
     expect(m.moduleRows(), hasLength(6));
     expect(m.moduleRows().first.subCount, 2);
   });
@@ -278,10 +290,16 @@ void main() {
     final e = m.panelEntries().firstWhere((x) => x.name == '20_Piping');
     expect(await m.rename(e, 'a:b'), contains('character'));
     expect(await m.rename(e, '20_Pipelines'), isNull);
-    expect(m.project!.modules.map((x) => x.name), contains('20_Pipelines'));
-    expect(m.project!.modules.firstWhere((x) => x.name == '20_Pipelines').discipline, 'Piping');
+    expect(m.modules.map((x) => x.name), contains('20_Pipelines'));
+    expect(m.modules.firstWhere((x) => x.name == '20_Pipelines').discipline, 'Piping');
     await m.undo();
-    expect(m.project!.modules.map((x) => x.name), contains('20_Piping'));
+    expect(m.modules.map((x) => x.name), contains('20_Piping'));
+
+    // a chosen discipline goes with the folder when it is renamed here
+    m.setDiscipline('30_Electrical', 'HSE');
+    m.openPanel(h.root.path);
+    await m.rename(m.panelEntries().firstWhere((x) => x.name == '30_Electrical'), '30_Power');
+    expect(m.modules.firstWhere((x) => x.name == '30_Power').discipline, 'HSE');
   });
 
   test('new folder, delete to the Recycle Bin, LIST / EDIT through the model', () async {

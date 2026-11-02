@@ -15,6 +15,8 @@ Future<void> main(List<String> args) async {
   if (i >= 0 && args.length > i + 2) {
     exit(await selfCheck(args[i + 1], args[i + 2]) ? 0 : 1);
   }
-  final model = AppModel(store: Store.forThisUser(), shell: defaultShell())..start();
+  final model = AppModel(store: Store.forThisUser(), shell: defaultShell())
+    ..start()
+    ..watchDisk();
   runApp(FolderManagerApp(model: model));
 }

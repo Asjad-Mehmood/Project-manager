@@ -66,7 +66,7 @@ foreach ($m in '00_Admin\Contracts', '10_Survey\01_Control Points', '10_Survey\0
 }
 Set-Content (Join-Path $project '10_Survey\Survey_Report_Rev2.pdf') ('x' * 2000)
 New-Item -ItemType Directory -Force $settings | Out-Null
-$json = @{ v6Checked = $true; current = 0; projects = @(@{ root = $project; title = 'Windows Check'; modules = @() }); options = @{ drv = $true } } | ConvertTo-Json -Depth 5
+$json = @{ current = 0; projects = @(@{ root = $project; title = 'Windows Check'; modules = @() }); options = @{ drv = $true } } | ConvertTo-Json -Depth 5
 Set-Content (Join-Path $settings 'settings.json') $json -Encoding utf8
 $p = Start-Process -FilePath $exe -PassThru
 Check (WaitFor { $p.Refresh(); $p.MainWindowHandle -ne 0 -and $p.MainWindowTitle -eq 'Project Folder Manager' } 30) 'opens a window titled "Project Folder Manager"'
@@ -75,7 +75,7 @@ Check (-not $p.HasExited) 'still running after 10 seconds'
 Check ((Shot 'dashboard') -gt 20) 'the screen shows the drawn dashboard, not a blank window'
 Check (WaitFor { Test-Path (Join-Path $data 'index') } 30) 'the project indexed itself in the background'
 $saved = Get-Content (Join-Path $settings 'settings.json') -Raw | ConvertFrom-Json
-Check ($saved.projects[0].modules.Count -eq 6) 'the six folders became the module list'
+Check ($saved.projects[0].pc -eq $env:COMPUTERNAME) 'the folder opened on this PC (its name was saved)'
 
 # 4. a second start brings the first window forward instead of opening another copy
 Start-Process -FilePath $exe

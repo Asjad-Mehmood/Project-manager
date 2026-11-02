@@ -36,8 +36,9 @@ class Box extends StatelessWidget {
     backgroundColor: C.dialog,
     insetPadding: const EdgeInsets.all(24),
     shape: RoundedRectangleBorder(
-      side: BorderSide(color: edge, width: 2),
-      borderRadius: BorderRadius.circular(5),
+      // a quiet frame; only a warning (delete, a clash) gets its colour
+      side: BorderSide(color: edge == C.teal ? C.fieldEdge : edge),
+      borderRadius: BorderRadius.circular(12),
     ),
     child: ConstrainedBox(
       constraints: BoxConstraints(maxWidth: width),

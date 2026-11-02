@@ -1,39 +1,43 @@
 # Project Folder Manager
 
-A Windows dashboard for a project's master folder, by [Excel to KML](https://www.exceltokml.com/project-folder-manager):
-every numbered module (00 Admin … 99 Archive) with its discipline colour, instant search across
-every folder and file, and a side panel to view, copy, move, rename and tidy folders without
-leaving the dashboard.
+A Windows dashboard for your project folders, by [Excel to KML](https://www.exceltokml.com/project-folder-manager):
+open a drive or any folder and see the folders in it with their discipline colours (00 Admin …
+99 Archive), search every folder and file instantly, and view, copy, move, rename and tidy them in
+a side panel without leaving the dashboard.
 
-Version 7 is the 6.2 HTML application rebuilt in Flutter with the same look, as a proper
-installed program that updates itself. See [CHANGELOG.md](CHANGELOG.md) for what is new.
+Version 7 is the 6.2 HTML application rebuilt in Flutter as a proper installed program that updates
+itself, with a cleaner look. See [CHANGELOG.md](CHANGELOG.md) for what is new.
 
 ![The dashboard](docs/screenshots/1-dashboard.png)
 ![A folder in the side panel](docs/screenshots/2-panel.png)
 
 ## Install
-Download `ProjectFolderManager-Setup.exe` from the [latest release](https://github.com/Asjad-Mehmood/Project-Folder-Manager/releases/latest)
+Download `ProjectFolderManager-Setup.exe` from the [latest release](https://github.com/Asjad-Mehmood/Project-manager/releases/latest)
 and open it. It installs for your Windows user only (no administrator rights), to
 `%LOCALAPPDATA%\ProjectFolderManager`, with Start menu and desktop shortcuts. Uninstall from
 Settings → Apps. Windows 10 or 11, 64-bit.
 
-The first time it opens it brings in a 6.2 copy's settings (`Project_Folder_Manager_config.txt`
-on the Desktop, in Downloads, Documents or the Survey Toolkit's folder); otherwise use ⋯ →
-*Bring in settings from v6*, or just paste the project folder into ROOT PATH and press SET.
+The first time it opens it asks what to open: click a drive, or choose any folder (a project's
+master folder works best). Change it any time from the top left. If a 6.2 copy's settings are on
+the PC, the start page offers to bring them in.
+
+![The start page](docs/screenshots/6-start.png)
 
 ## Use
-One row under the banner holds everything; the less-used options sit in its menus.
+The folder list is read from the disk, so it is never out of step: folders made, renamed or deleted
+in Explorer show up by themselves. There is nothing to scan or rebuild.
 
 | | |
 |---|---|
-| **Project ▾** (top left) | Your projects, to switch between them. Open a project: pick its folder, type or paste its path, or FIND projects on every drive. This project: open the root in Explorer, rename it, take it off the list. |
-| **Search, DEEP, Discipline** | Without DEEP the box filters module names; with DEEP it searches every indexed folder and file (every word must be in the name). Esc clears it. |
-| **LIST ▾** | Always open the whole tree, hide missing modules, collapse; Scan, Fix names, Rebuild, Refresh (F5). |
-| **INDEX ▾** | Index this project, the whole drive or all drives; Stop keeps what was found. The project also indexes itself in the background. |
-| **GO TO ▾** | Pinned folders (right-click any folder → Pin), every drive, and the drives strip. |
-| **View ▾** | The six layouts, Alt+1 to Alt+6. |
-| **⋯** | Bring in v6 settings, look for an update, keyboard shortcuts, about. |
-| **Modules** | Click a name or VIEW for the panel, OPEN or double-click for Explorer, the arrow for its sub-folders, the coloured chip for its discipline. Right-click for more. |
+| **Folder ▾** (top left) | The open folder's name and path. Click to open a drive, choose a folder, type or paste a path, find projects on your drives, or go back to a recent one. This folder: open it in Explorer, rename it here (only the name shown), remove it from the list. |
+| **Search, DEEP, Discipline** | Without DEEP the box filters the folder names; with DEEP it searches every indexed folder and file (every word must be in the name). Esc clears it. |
+| **INDEX ▾** | Index this folder, the whole drive or all drives; Stop keeps what was found. The open folder also indexes itself in the background. |
+| **GO TO ▾** | Pinned folders (right-click any folder → Pin) and every drive, in the panel. |
+| **View ▾** | The six layouts (Alt+1 to Alt+6) and the drives strip. |
+| **⋯** | Bring in 6.2 settings, look for an update, keyboard shortcuts, about. |
+| **The clock** | Click it for the calendar. |
+| **Above the list** | How many folders, the index, EXPAND ALL, COLLAPSE and refresh (F5). |
+| **Folders** | Click a name or VIEW for the panel, OPEN or double-click for Explorer, the arrow for its sub-folders, the coloured chip for its discipline. Right-click for more. |
 | **Panel** | Back, forward, up, filter, Show ▾ and Sort ▾ on top. Below, what you can do now: New folder, LIST / EDIT and Explorer; or, once something is selected, Copy, Cut, Rename and Delete. Paste appears when something is copied. Drag items onto any folder. UNDO (Ctrl+Z). |
 | **LIST / EDIT** | The names in a box to copy, or to edit and rename many at once, with a preview and quick tools (find and replace, add text, number, case). |
 
@@ -70,10 +74,10 @@ flutter test test/ui_test.dart --dart-define=SHOTS=true   # pictures in docs/scr
 
 | | |
 |---|---|
-| `lib/src/core` | The rules, without Flutter: settings and the v6.2 file, modules, the index and its background walk, copy / move / rename / undo, LIST / EDIT, FIND |
+| `lib/src/core` | The rules, without Flutter: settings and the 6.2 file, disciplines, the index and its background walk, copy / move / rename / undo, LIST / EDIT, FIND |
 | `lib/src/state` | `AppModel` (everything the window shows and does) and `Store` (files in AppData) |
 | `lib/src/platform` | Windows: drives, Recycle Bin, opening files and folders (win32), folder picker |
-| `lib/src/ui` | The window, in v6.2's colours (`theme.dart`) |
+| `lib/src/ui` | The window (`theme.dart` holds the colours) |
 | `lib/src/update` | Self-update |
 | `installer`, `tool`, `.github/workflows` | NSIS installer, the Windows check, CI and releases |
 

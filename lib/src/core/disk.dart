@@ -91,5 +91,8 @@ class FolderCache {
   /// Read [path] again next time
   void forget(String path) => _kids.remove(pathKey(path));
 
+  /// [path] has been read and is kept
+  bool has(String path) => _kids.containsKey(pathKey(path));
+
   void clear() => _kids.clear();
 }

@@ -58,7 +58,7 @@ Future<bool> selfCheck(String folder, String reportPath) async {
 
   await step('an empty project gets the standard folders', () async {
     check((await m.createStandardFolders()).isEmpty, 'made');
-    check(m.project!.modules.length == 11, '11 modules');
+    check(m.modules.length == 11, '11 folders');
     File(p.join(root.path, '10_Survey', 'Survey Report & Notes (rev 2).pdf')).writeAsStringSync('x' * 5000);
   });
 

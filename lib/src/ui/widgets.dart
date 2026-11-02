@@ -1,5 +1,5 @@
-// v6.2's small parts: the buttons (plain, lit "on", amber), labels, the dark fields and lists,
-// the chips (discipline, "3 sub", file type), the green / red dot and the KPI boxes.
+// The small parts: the buttons (plain, lit "on", amber, quiet "ghost"), labels, the dark fields and
+// lists, the chips (discipline, "3 sub", file type), the layout pictures and the menus.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -53,7 +53,6 @@ class _BtnState extends State<Btn> {
     final hot = enabled && (_hover || _focus);
     Gradient? g;
     Color bg, fg, edge;
-    List<BoxShadow>? glow;
     if (ghost) {
       bg = widget.lit ? const Color(0x3313A8A8) : (hot ? const Color(0x2213A8A8) : Colors.transparent);
       fg = widget.lit || hot ? C.tealHi : C.btnText;
@@ -62,12 +61,10 @@ class _BtnState extends State<Btn> {
       bg = C.amber;
       fg = const Color(0xFF241A00);
       edge = C.amberHi;
-      glow = const [BoxShadow(color: C.amber, blurRadius: 10)];
     } else if (hot) {
       bg = C.teal;
       fg = C.ink;
       edge = C.tealEdge;
-      glow = const [BoxShadow(color: C.teal, blurRadius: 10)];
     } else if (kind == BtnKind.on) {
       bg = C.onTop;
       g = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [C.onTop, C.onBottom]);
@@ -89,14 +86,13 @@ class _BtnState extends State<Btn> {
       duration: const Duration(milliseconds: 90),
       padding: EdgeInsets.symmetric(
         horizontal: widget.label.isEmpty ? 6 : (widget.small ? 8 : 11),
-        vertical: widget.small ? 2 : 4,
+        vertical: widget.small ? 3 : 5,
       ),
       decoration: BoxDecoration(
         color: g == null ? bg : null,
         gradient: g,
         border: Border.all(color: edge),
-        borderRadius: BorderRadius.circular(3),
-        boxShadow: glow,
+        borderRadius: BorderRadius.circular(radius),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -105,7 +101,11 @@ class _BtnState extends State<Btn> {
             Icon(widget.icon, size: size + 3, color: fg),
             if (widget.label.isNotEmpty) const SizedBox(width: 4),
           ],
-          if (widget.label.isNotEmpty) Text(widget.label, style: t(size, color: fg, ls: .5, h: 1.25)),
+          if (widget.label.isNotEmpty)
+            Text(
+              widget.label,
+              style: t(size, color: fg, ls: .5, h: 1.25, w: kind == BtnKind.on && !ghost ? FontWeight.w600 : null),
+            ),
           if (widget.trailing != null) ...[
             const SizedBox(width: 2),
             Icon(widget.trailing, size: size + 4, color: fg.withValues(alpha: .8)),
@@ -162,13 +162,13 @@ InputDecoration fieldDecoration({String? hint}) => InputDecoration(
   contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
   enabledBorder: OutlineInputBorder(
     borderSide: const BorderSide(color: C.fieldEdge),
-    borderRadius: BorderRadius.circular(3),
+    borderRadius: BorderRadius.circular(radius),
   ),
   focusedBorder: OutlineInputBorder(
     borderSide: const BorderSide(color: C.teal),
-    borderRadius: BorderRadius.circular(3),
+    borderRadius: BorderRadius.circular(radius),
   ),
-  border: OutlineInputBorder(borderRadius: BorderRadius.circular(3)),
+  border: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
 );
 
 /// The dark text box
@@ -245,7 +245,7 @@ class Select<T> extends StatelessWidget {
       decoration: BoxDecoration(
         color: C.field,
         border: Border.all(color: C.fieldEdge),
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(radius),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
@@ -253,6 +253,7 @@ class Select<T> extends StatelessWidget {
           isExpanded: true,
           isDense: true,
           dropdownColor: C.dialog,
+          borderRadius: BorderRadius.circular(8),
           iconEnabledColor: C.label,
           focusColor: Colors.transparent,
           style: t(12),
@@ -271,47 +272,6 @@ class Select<T> extends StatelessWidget {
     );
     return tip == null ? w : Tooltip(message: tip!, child: w);
   }
-}
-
-/// A KPI box top right: the number and its name
-class Kpi extends StatelessWidget {
-  const Kpi(this.value, this.label, {super.key, this.color = C.teal, this.glow = const Color(0xFF00CC66)});
-  final int value;
-  final String label;
-  final Color color;
-  final Color glow;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(left: 9),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-    constraints: const BoxConstraints(minWidth: 86),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [C.kpiTop, C.kpiBottom],
-      ),
-      border: Border.all(color: C.fieldEdge),
-      borderRadius: BorderRadius.circular(4),
-      boxShadow: const [BoxShadow(color: Colors.black, blurRadius: 6, offset: Offset(0, 2))],
-    ),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '$value',
-          style: t(
-            20,
-            color: color,
-            w: FontWeight.bold,
-            h: 1.1,
-          ).copyWith(shadows: [Shadow(color: glow, blurRadius: 12)]),
-        ),
-        Text(label, style: t(9, color: C.label, ls: 1.4)),
-      ],
-    ),
-  );
 }
 
 /// The discipline chip; clicking it changes the discipline
@@ -379,29 +339,6 @@ class ExtChip extends StatelessWidget {
 /// The folder icon, amber as in v6.2
 const folderIcon = Icon(Icons.folder, size: 16, color: C.amber);
 
-/// Green when the folder is on the disk, red when not
-class Dot extends StatelessWidget {
-  const Dot(this.ok, {super.key});
-  final bool ok;
-  @override
-  Widget build(BuildContext context) {
-    final c = ok ? C.green : C.red;
-    return Tooltip(
-      message: ok ? 'On the disk' : 'Not on the disk',
-      child: Container(
-        width: 9,
-        height: 9,
-        decoration: BoxDecoration(
-          color: c,
-          shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: c, blurRadius: 8)],
-        ),
-      ),
-    );
-  }
-}
-
-/// Tracks the mouse for hover colours
 class Hover extends StatefulWidget {
   const Hover({super.key, required this.builder, this.cursor = MouseCursor.defer});
   final Widget Function(BuildContext, bool hover) builder;
@@ -421,7 +358,32 @@ class _HoverState extends State<Hover> {
   );
 }
 
-/// One of the six VIEW buttons: a little picture of the layout
+/// [left, top, width, height, panel?] inside a 28 × 20 box, as 6.2 drew them
+const _layoutParts = <List<List<num>>>[
+  [
+    [3, 3, 22, 14, 0],
+  ],
+  [
+    [3, 3, 14, 14, 0],
+    [19, 3, 6, 14, 1],
+  ],
+  [
+    [3, 3, 10, 14, 0],
+    [15, 3, 10, 14, 1],
+  ],
+  [
+    [3, 3, 6, 14, 0],
+    [11, 3, 14, 14, 1],
+  ],
+  [
+    [3, 3, 22, 6, 0],
+    [3, 11, 22, 6, 1],
+  ],
+  [
+    [3, 3, 22, 14, 1],
+  ],
+];
+
 /// The little picture of a layout, for the VIEW menu
 class LayoutPicture extends StatelessWidget {
   const LayoutPicture(this.n, {super.key, this.on = false});
@@ -438,7 +400,7 @@ class LayoutPicture extends StatelessWidget {
     ),
     child: Stack(
       children: [
-        for (final r in LayoutIcon._parts[n])
+        for (final r in _layoutParts[n])
           Positioned(
             left: r[0].toDouble(),
             top: r[1].toDouble(),
@@ -454,86 +416,6 @@ class LayoutPicture extends StatelessWidget {
             ),
           ),
       ],
-    ),
-  );
-}
-
-class LayoutIcon extends StatelessWidget {
-  const LayoutIcon(this.n, {super.key, required this.on, required this.onTap, required this.tip});
-  final int n;
-  final bool on;
-  final VoidCallback onTap;
-  final String tip;
-
-  // [left, top, width, height, panel?] inside a 28 × 20 box, as v6.2 drew them
-  static const _parts = <List<List<num>>>[
-    [
-      [3, 3, 22, 14, 0],
-    ],
-    [
-      [3, 3, 14, 14, 0],
-      [19, 3, 6, 14, 1],
-    ],
-    [
-      [3, 3, 10, 14, 0],
-      [15, 3, 10, 14, 1],
-    ],
-    [
-      [3, 3, 6, 14, 0],
-      [11, 3, 14, 14, 1],
-    ],
-    [
-      [3, 3, 22, 6, 0],
-      [3, 11, 22, 6, 1],
-    ],
-    [
-      [3, 3, 22, 14, 1],
-    ],
-  ];
-
-  @override
-  Widget build(BuildContext context) => Hover(
-    cursor: SystemMouseCursors.click,
-    builder: (context, h) => Tooltip(
-      message: tip,
-      child: Semantics(
-        button: true,
-        selected: on,
-        label: tip,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 30,
-            height: 22,
-            margin: const EdgeInsets.only(left: 4),
-            decoration: BoxDecoration(
-              color: on ? const Color(0xFF0E4F55) : C.btnBottom,
-              border: Border.all(color: on || h ? C.tealEdge : C.fieldEdge),
-              borderRadius: BorderRadius.circular(3),
-              boxShadow: h ? const [BoxShadow(color: C.teal, blurRadius: 8)] : null,
-            ),
-            child: Stack(
-              children: [
-                for (final r in _parts[n])
-                  Positioned(
-                    left: r[0].toDouble(),
-                    top: r[1].toDouble(),
-                    width: r[2].toDouble(),
-                    height: r[3].toDouble(),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: r[4] == 1
-                            ? (on ? C.amberHi : C.amber)
-                            : (on ? const Color(0xFF9FD8D8) : const Color(0xFF4F7A96)),
-                        borderRadius: BorderRadius.circular(1),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
     ),
   );
 }
@@ -653,7 +535,7 @@ class AccentBox extends StatelessWidget {
     this.color,
     this.padding = EdgeInsets.zero,
     this.margin = EdgeInsets.zero,
-    this.radius = 4,
+    this.radius = 7,
     this.shadow = false,
     this.bottomLine,
   });
@@ -684,7 +566,7 @@ class AccentBox extends StatelessWidget {
           ? Border.all(color: edge!)
           : (bottomLine != null ? Border(bottom: BorderSide(color: bottomLine!)) : null),
       borderRadius: bottomLine != null && edge == null ? null : BorderRadius.circular(radius),
-      boxShadow: shadow ? const [BoxShadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 1))] : null,
+      boxShadow: shadow ? const [BoxShadow(color: Color(0x55000000), blurRadius: 6, offset: Offset(0, 2))] : null,
     ),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(radius - 1),

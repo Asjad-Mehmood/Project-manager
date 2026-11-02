@@ -37,7 +37,7 @@ void main() {
   });
 
   test('the release files are named as the release workflow makes them', () {
-    expect(releaseBase, 'https://github.com/Asjad-Mehmood/Project-Folder-Manager/releases/latest/download/');
+    expect(releaseBase, 'https://github.com/Asjad-Mehmood/Project-manager/releases/latest/download/');
     expect(installerName, 'ProjectFolderManager-Setup.exe');
     expect(manifestName, 'latest.json');
     expect(RegExp(r'^\d+\.\d+\.\d+$').hasMatch(appVersion), isTrue);

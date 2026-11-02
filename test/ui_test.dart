@@ -52,8 +52,7 @@ Harness _project({bool index = true}) {
     for (final f in ['Topo_Survey_2026.dwg', 'Levels.xlsx', 'Site photo 01.jpg', 'Control.kml']) {
       File(h.at('10_Survey/02_Topographic Survey/$f')).writeAsStringSync('x' * (f.length * 9000));
     }
-    h.model.scan();
-    h.model.project!.modules.sort((a, b) => a.name.compareTo(b.name));
+    h.model.refresh(); // the folders made above show up
   }
   if (index) {
     final idx = SearchIndex(built: DateTime.now().subtract(const Duration(hours: 2)), root: h.root.path);
@@ -130,16 +129,19 @@ void main() {
     }
   });
 
-  testWidgets('the dashboard: modules with disciplines, sub-folders and KPIs; VIEW opens the panel', (tester) async {
+  testWidgets('the dashboard: folders with disciplines and sub-folders; VIEW opens the panel', (tester) async {
     final h = _project();
     addTearDown(h.dispose);
     await _show(tester, h);
     expect(find.text('North Gas Field'), findsOneWidget);
-    expect(find.text('15:38:59'), findsOneWidget);
-    expect(find.text('Friday, 16 October 2026'), findsOneWidget);
+    expect(find.text(h.root.path), findsOneWidget);
+    expect(find.text('15:38'), findsOneWidget);
+    expect(find.text('Fri 16 Oct'), findsOneWidget);
     expect(find.text('10_Survey'), findsOneWidget);
     expect(find.text('Civil Works'), findsWidgets);
-    expect(find.text('MODULES'), findsOneWidget);
+    expect(find.text('FOLDERS'), findsOneWidget);
+    expect(find.text('11'), findsOneWidget);
+    expect(find.textContaining('indexed, 2 h'), findsOneWidget);
     await _shot(tester, '1-dashboard');
 
     await tester.tap(_btn('VIEW').at(1)); // 10_Survey
@@ -212,7 +214,7 @@ void main() {
     expect(h.model.panelPath, h.root.path);
   });
 
-  testWidgets('the discipline chip opens the picker; the title renames the project', (tester) async {
+  testWidgets('the discipline chip opens the picker; the folder menu renames what is shown', (tester) async {
     final h = _project();
     addTearDown(h.dispose);
     await _show(tester, h);
@@ -222,9 +224,11 @@ void main() {
     await _shot(tester, '5-discipline');
     await tester.tap(find.text('HSE'));
     await tester.pumpAndSettle();
-    expect(h.model.project!.modules.firstWhere((m) => m.name == '10_Survey').discipline, 'HSE');
+    expect(h.model.modules.firstWhere((m) => m.name == '10_Survey').discipline, 'HSE');
 
     await tester.tap(find.text('North Gas Field'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rename it here ...'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'South Pipeline');
     await tester.tap(_btn('OK'));
@@ -274,7 +278,7 @@ void main() {
     expect(File(h.at('10_Survey/02_Topographic Survey/Control.kml')).existsSync(), isTrue);
   });
 
-  testWidgets('every v6.2 option is still there, in the toolbar\'s menus', (tester) async {
+  testWidgets('every option is still there, in the top bar\'s menus and above the list', (tester) async {
     final h = _project();
     addTearDown(h.dispose);
     await _show(tester, h);
@@ -288,75 +292,96 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    // project: SET / BROWSE / FIND / OPEN ROOT, rename, switch
-    await open(find.byTooltip('Switch or open a project'));
+    // the folder: recent, a drive, choose, type, find; Explorer, rename, remove
+    await open(find.byTooltip('Change the folder'));
     for (final x in [
-      'YOUR PROJECTS',
-      'Pick its folder ...',
-      'Type or paste its path ...',
+      'RECENT',
+      'Choose a folder ...',
+      'Type or paste a path ...',
       'Find projects on my drives ...',
-      'Open the root folder in Explorer',
-      'Rename the project ...',
+      'Drive D:  Projects',
+      'Open it in Explorer',
+      'Rename it here ...',
+      'Remove it from the list',
     ]) {
       expect(find.text(x), findsOneWidget, reason: x);
     }
-    await _shot(tester, '7-menu-project');
+    await _shot(tester, '7-menu-folder');
     await close();
 
-    // LIST: ALWAYS TREE, MISSING, COLLAPSE, SCAN, FIX NAMES, REBUILD, REFRESH
-    await open(find.text('LIST'));
-    for (final x in [
-      'Always open the whole tree',
-      'Hide modules that are missing',
-      'Collapse everything',
-      'Scan: add new folders',
-      'Fix names: follow renamed folders',
-      'Rebuild the list from this PC',
-      'Refresh from the disk  (F5)',
-    ]) {
-      expect(find.text(x), findsOneWidget, reason: x);
-    }
-    await _shot(tester, '8-menu-list');
-    await tester.tap(find.text('Always open the whole tree'));
-    await tester.pumpAndSettle();
+    // above the list: expand all (ALWAYS TREE), collapse, refresh
+    await tester.tap(_btn('EXPAND ALL'));
+    await tester.pump();
     expect(h.model.options.tree, isTrue);
+    expect(find.text('01_Control Points'), findsOneWidget);
+    await tester.tap(_btn('COLLAPSE'));
+    await tester.pump();
+    expect(h.model.options.tree, isFalse);
+    expect(find.text('01_Control Points'), findsNothing);
+    expect(find.byTooltip('Read the disk again  (F5)'), findsOneWidget);
 
     // INDEX: the three scopes, STOP, how it is made
     await open(find.text('INDEX'));
     for (final x in [
-      'Index this project',
+      'Index this folder',
       'Index all drives',
-      'Index the project by itself',
+      'Index the folder by itself',
       'Files too, not only folders',
     ]) {
       expect(find.text(x), findsOneWidget, reason: x);
     }
     expect(find.textContaining('Index the whole drive'), findsOneWidget);
+    await _shot(tester, '8-menu-index');
     await close();
 
-    // GO TO: pins and DRIVES
+    // GO TO: pins and drives
     await open(find.text('GO TO'));
-    expect(find.text('Show the drives strip'), findsOneWidget);
+    expect(find.text('PINNED'), findsOneWidget);
     expect(find.text('D:  Projects'), findsOneWidget);
+    await close();
+
+    // VIEW: the six layouts and the drives strip
+    await open(find.byType(LayoutPicture).first);
+    expect(find.text('Tree above, panel below'), findsOneWidget);
     await tester.tap(find.text('Show the drives strip'));
     await tester.pumpAndSettle();
     expect(h.model.options.drives, isTrue);
-
-    // VIEW: the six layouts
     await open(find.byType(LayoutPicture).first);
-    expect(find.text('Tree above, panel below'), findsOneWidget);
     await tester.tap(find.text('Panel only'));
     await tester.pumpAndSettle();
     expect(h.model.layout, 5);
+
+    // the clock: the calendar
+    await open(find.text('15:38'));
+    expect(find.text('October 2026'), findsOneWidget);
+    await tester.tap(find.byTooltip('Month after'));
+    await tester.pump();
+    expect(find.text('November 2026'), findsOneWidget);
+    await close();
   });
 
-  testWidgets('with no project: a start page that says what to do', (tester) async {
-    final h = Harness.make(settingsJson: '{"v6Checked": true, "options": {"autoIndex": false}}', project: false);
+  testWidgets('a new setup: the start page asks for a drive or a folder', (tester) async {
+    final h = Harness.make(settingsJson: '{"options": {"autoIndex": false}}');
     addTearDown(h.dispose);
     h.model.start();
     await _show(tester, h);
-    expect(find.text('Point it at your project folder'), findsOneWidget);
-    expect(_btn('BRING IN v6 SETTINGS'), findsOneWidget);
+    expect(find.text('Open a drive or a folder'), findsOneWidget);
+    expect(find.textContaining('Projects', findRichText: true), findsOneWidget); // drive D:
+    expect(find.text('384 GB free of 931 GB'), findsOneWidget);
+    expect(_btn('CHOOSE A FOLDER ...'), findsOneWidget);
     await _shot(tester, '6-start');
+
+    h.shell.folderToPick = h.root.path;
+    await tester.tap(_btn('CHOOSE A FOLDER ...'));
+    await tester.pumpAndSettle();
+    expect(h.model.root, h.root.path);
+    expect(find.text('10_Survey'), findsOneWidget);
+
+    // the folder goes missing: the same page, saying so
+    Directory(h.root.path).renameSync('${h.root.path}-moved');
+    h.model.refresh();
+    await tester.pump();
+    expect(find.text('This folder is not on this PC'), findsOneWidget);
+    expect(_btn('REMOVE FROM THE LIST'), findsOneWidget);
   });
 }

@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 /// Where installed copies look: the newest release of the public repository
-const releaseBase = 'https://github.com/Asjad-Mehmood/Project-Folder-Manager/releases/latest/download/';
+const releaseBase = 'https://github.com/Asjad-Mehmood/Project-manager/releases/latest/download/';
 const manifestName = 'latest.json';
 const installerName = 'ProjectFolderManager-Setup.exe';
 

@@ -1,6 +1,6 @@
-// The left side: the project's modules (each with its discipline, sub-folders, on-disk dot,
-// VIEW and OPEN), the tree under them, and DEEP search results from the index. New in v7:
-// right-click menus, dropping files from the panel onto a folder, and a start page that helps.
+// The left side: the folders in the opened folder (each with its discipline, sub-folders, VIEW
+// and OPEN), the tree under them, and DEEP search results from the index. The list is read from
+// the disk, so it is never out of step. Also the start page: open a drive or a folder.
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -8,7 +8,9 @@ import 'package:path/path.dart' as p;
 import '../core/disciplines.dart';
 import '../core/disk.dart';
 import '../core/file_ops.dart';
+import '../core/format.dart';
 import '../core/search_index.dart';
+import '../platform/shell.dart';
 import '../state/app_model.dart';
 import 'commands.dart';
 import 'theme.dart';
@@ -24,12 +26,19 @@ class ModuleList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (model.project == null) return _Welcome(cmd: cmd);
-    if (!model.rootExists) return _RootMissing(model: model, cmd: cmd);
+    if (model.project == null) return StartPage(model: model, cmd: cmd);
+    if (!model.rootExists) return StartPage(model: model, cmd: cmd, missing: model.root);
     if (model.showingResults) return _Results(model: model, cmd: cmd, width: width);
     final rows = model.moduleRows();
     if (rows.isEmpty) {
-      return _Empty(model: model, cmd: cmd);
+      return Column(
+        children: [
+          _ListHead(model: model, cmd: cmd, shown: 0),
+          Expanded(
+            child: _Empty(model: model, cmd: cmd),
+          ),
+        ],
+      );
     }
     final lines = <Object>[];
     void kids(String path, int depth) {
@@ -43,16 +52,102 @@ class ModuleList extends StatelessWidget {
       lines.add(r);
       if (r.exists && model.isOpen(r.path)) kids(r.path, 1);
     }
-    return Scrollbar(
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        itemCount: lines.length,
-        itemBuilder: (context, i) {
-          final l = lines[i];
-          if (l is ModuleRow) return _ModuleTile(row: l, model: model, cmd: cmd, width: width);
-          final (e, depth) = l as (Entry, int);
-          return _KidTile(entry: e, depth: depth, model: model, cmd: cmd, width: width);
-        },
+    return Column(
+      children: [
+        _ListHead(model: model, cmd: cmd, shown: rows.length),
+        Expanded(
+          child: Scrollbar(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
+              itemCount: lines.length,
+              itemBuilder: (context, i) {
+                final l = lines[i];
+                if (l is ModuleRow) return _ModuleTile(row: l, model: model, cmd: cmd, width: width);
+                final (e, depth) = l as (Entry, int);
+                return _KidTile(entry: e, depth: depth, model: model, cmd: cmd, width: width);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Above the list: how many folders, the index, and expand / collapse / refresh
+class _ListHead extends StatelessWidget {
+  const _ListHead({required this.model, required this.cmd, required this.shown});
+  final AppModel model;
+  final Commands cmd;
+  final int shown;
+
+  @override
+  Widget build(BuildContext context) {
+    final all = model.modules.length;
+    final idx = model.index;
+    return LayoutBuilder(
+      builder: (context, box) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 12, 6),
+        child: Row(
+          children: [
+            Text(
+              'FOLDERS',
+              style: t(11, color: C.label, w: FontWeight.w600, ls: 1.2),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+              decoration: BoxDecoration(color: C.subBg, borderRadius: BorderRadius.circular(10)),
+              child: Text(
+                shown == all ? '$all' : '$shown of $all',
+                style: t(11, color: C.tealHi, w: FontWeight.w600),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: box.maxWidth < 430
+                  ? const SizedBox()
+                  : Text(
+                      model.indexing
+                          ? 'indexing: ${model.indexedCount} found so far'
+                          : idx.isEmpty
+                          ? 'not indexed yet'
+                          : '${model.indexedCount} indexed'
+                                '${idx.built == null ? '' : ', ${ago(idx.built!, model.now())}'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: t(11, color: C.muted),
+                    ),
+            ),
+            Btn(
+              box.maxWidth < 560 ? '' : 'EXPAND ALL',
+              icon: Icons.unfold_more,
+              small: true,
+              kind: BtnKind.ghost,
+              lit: model.options.tree,
+              tip: model.options.tree
+                  ? 'Every folder is open, three levels deep'
+                  : 'Open every folder, three levels deep',
+              onTap: () => model.setTree(!model.options.tree),
+            ),
+            Btn(
+              box.maxWidth < 560 ? '' : 'COLLAPSE',
+              icon: Icons.unfold_less,
+              small: true,
+              kind: BtnKind.ghost,
+              tip: 'Close every folder',
+              onTap: model.collapseAll,
+            ),
+            Btn(
+              '',
+              icon: Icons.refresh,
+              small: true,
+              kind: BtnKind.ghost,
+              tip: 'Read the disk again  (F5)',
+              onTap: model.refresh,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -120,65 +215,47 @@ class _ModuleTile extends StatelessWidget {
       cmd: cmd,
       builder: (context, over) => Hover(
         builder: (context, h) => _Clicks(
-          onDouble: row.exists ? () => cmd.open(row.path) : null,
+          onDouble: () => cmd.open(row.path),
           onRight: (at) => cmd.folderMenu(at, row.path, module: row.module),
           child: AccentBox(
-            margin: const EdgeInsets.only(bottom: 4),
-            colors: h || over ? const [C.rowHoverTop, C.rowHoverBottom] : const [C.rowTop, C.rowBottom],
-            accent: h || over ? C.tealHi : color,
+            margin: const EdgeInsets.only(bottom: 5),
+            color: h || over ? C.rowHoverTop : C.rowTop,
+            accent: color,
+            accentWidth: 3,
             edge: over ? C.amber : (h ? C.rowHoverEdge : C.rowEdge),
-            shadow: true,
-            padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
             child: Row(
               children: [
-                _Arrow(open: open, onTap: row.exists ? () => model.toggleOpen(row.path) : null),
-                if (width >= 420)
-                  SizedBox(
-                    width: 26,
-                    child: Text(row.number.toString().padLeft(2, '0'), style: t(11, color: C.muted, m: true)),
-                  ),
+                _Arrow(open: open, onTap: row.subCount > 0 ? () => model.toggleOpen(row.path) : null),
+                const SizedBox(width: 4),
+                Icon(Icons.folder_rounded, size: 20, color: color),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Name(
-                        row.module.name,
-                        style: t(14, color: C.white, w: FontWeight.bold, ls: .3),
-                        onTap: () => row.exists ? cmd.view(row.path) : null,
-                      ),
-                      if (width >= 500) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          row.path,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: t(10, color: C.muted, m: true),
-                        ),
-                      ],
-                    ],
+                  child: _Name(
+                    row.module.name,
+                    style: t(14, color: C.white, w: FontWeight.w600),
+                    onTap: () => cmd.view(row.path),
                   ),
                 ),
-                const SizedBox(width: 14),
-                if (width >= 760) ...[
+                const SizedBox(width: 10),
+                if (width >= 700) ...[
                   DisciplineChip(row.module.discipline, onTap: () => cmd.chooseDiscipline(row.module)),
-                  const SizedBox(width: 9),
+                  const SizedBox(width: 8),
                 ],
-                if (width >= 620) ...[SubChip(row.subCount), const SizedBox(width: 9)],
-                Dot(row.exists),
-                const SizedBox(width: 11),
+                if (width >= 560) ...[SubChip(row.subCount), const SizedBox(width: 6)],
                 Btn(
-                  'VIEW',
-                  icon: Icons.folder_open,
+                  width >= 480 ? 'VIEW' : '',
+                  icon: Icons.visibility_outlined,
                   kind: BtnKind.ghost,
                   tip: 'Show it in the panel',
-                  onTap: row.exists ? () => cmd.view(row.path) : null,
+                  onTap: () => cmd.view(row.path),
                 ),
                 Btn(
-                  'OPEN',
-                  icon: Icons.bolt,
+                  width >= 480 ? 'OPEN' : '',
+                  icon: Icons.open_in_new,
                   kind: BtnKind.ghost,
                   tip: 'Open in Explorer  (double-click)',
-                  onTap: row.exists ? () => cmd.open(row.path) : null,
+                  onTap: () => cmd.open(row.path),
                 ),
               ],
             ),
@@ -215,15 +292,18 @@ class _KidTile extends StatelessWidget {
           onDouble: () => cmd.open(entry.path),
           onRight: (at) => cmd.folderMenu(at, entry.path),
           child: AccentBox(
-            margin: EdgeInsets.only(bottom: 4, left: 14.0 + depth * 22),
-            colors: h || over ? const [C.rowHoverTop, C.rowHoverBottom] : const [C.kidTop, C.kidBottom],
-            accent: h || over ? C.tealHi : C.teal,
-            accentWidth: 3,
+            margin: EdgeInsets.only(bottom: 4, left: 12.0 + depth * 22),
+            color: h || over ? C.rowHoverTop : C.kidTop,
+            accent: Colors.transparent,
+            accentWidth: 0,
             edge: over ? C.amber : (h ? C.rowHoverEdge : C.rowEdge),
-            padding: const EdgeInsets.fromLTRB(9, 6, 10, 6),
+            padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
             child: Row(
               children: [
                 _Arrow(open: open, onTap: subs > 0 ? () => model.toggleOpen(entry.path) : null),
+                const SizedBox(width: 4),
+                const Icon(Icons.folder_outlined, size: 17, color: C.label),
+                const SizedBox(width: 9),
                 Expanded(
                   child: _Name(
                     entry.name,
@@ -232,17 +312,17 @@ class _KidTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 14),
-                if (width >= 620) ...[SubChip(subs), const SizedBox(width: 9)],
+                if (width >= 560) ...[SubChip(subs), const SizedBox(width: 6)],
                 Btn(
-                  'VIEW',
-                  icon: Icons.folder_open,
+                  width >= 480 ? 'VIEW' : '',
+                  icon: Icons.visibility_outlined,
                   kind: BtnKind.ghost,
                   tip: 'Show it in the panel',
                   onTap: () => cmd.view(entry.path),
                 ),
                 Btn(
-                  'OPEN',
-                  icon: Icons.bolt,
+                  width >= 480 ? 'OPEN' : '',
+                  icon: Icons.open_in_new,
                   kind: BtnKind.ghost,
                   tip: 'Open in Explorer  (double-click)',
                   onTap: () => cmd.open(entry.path),
@@ -388,7 +468,7 @@ class _HitTile extends StatelessWidget {
         onDouble: () => cmd.open(hit.path),
         onRight: (at) => hit.isFile
             ? cmd.menuAt(at, [
-                (Icons.bolt, 'Open', () => cmd.open(hit.path)),
+                (Icons.open_in_new, 'Open', () => cmd.open(hit.path)),
                 (Icons.folder_open, 'View its folder', view),
                 (Icons.manage_search, 'Show in Explorer', () => model.shell.reveal(hit.path)),
                 null,
@@ -398,8 +478,9 @@ class _HitTile extends StatelessWidget {
         child: AccentBox(
           margin: const EdgeInsets.only(bottom: 4),
           padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
-          colors: h ? const [C.rowHoverTop, C.rowHoverBottom] : const [C.rowTop, C.rowBottom],
-          accent: h ? C.tealHi : (d == null ? C.chipGrey : disciplineColor(d)),
+          color: h ? C.rowHoverTop : C.rowTop,
+          accent: d == null ? C.chipGrey : disciplineColor(d),
+          accentWidth: 3,
           edge: h ? C.rowHoverEdge : C.rowEdge,
           child: Row(
             children: [
@@ -428,10 +509,16 @@ class _HitTile extends StatelessWidget {
               ),
               if (d != null && width >= 760) ...[const SizedBox(width: 9), DisciplineChip(d)],
               const SizedBox(width: 9),
-              Btn('VIEW', icon: Icons.folder_open, kind: BtnKind.ghost, tip: 'Show it in the panel', onTap: view),
+              Btn(
+                'VIEW',
+                icon: Icons.visibility_outlined,
+                kind: BtnKind.ghost,
+                tip: 'Show it in the panel',
+                onTap: view,
+              ),
               Btn(
                 'OPEN',
-                icon: Icons.bolt,
+                icon: Icons.open_in_new,
                 kind: BtnKind.ghost,
                 tip: 'Open it  (double-click)',
                 onTap: () => cmd.open(hit.path),
@@ -482,41 +569,201 @@ class _Message extends StatelessWidget {
   );
 }
 
-class _Welcome extends StatelessWidget {
-  const _Welcome({required this.cmd});
-  final Commands cmd;
-  @override
-  Widget build(BuildContext context) => _Message(
-    icon: Icons.dashboard_customize_outlined,
-    title: 'Point it at your project folder',
-    text:
-        'Pick the project\'s master folder, type or paste its path, or let FIND look on every drive. '
-        'The project is then indexed by itself in the background, so search is instant.',
-    actions: [
-      Btn('PICK THE FOLDER', icon: Icons.folder_open, kind: BtnKind.on, onTap: cmd.browse),
-      Btn('TYPE A PATH', icon: Icons.edit_note, onTap: cmd.typePath),
-      Btn('FIND', icon: Icons.search, onTap: cmd.find),
-      Btn('BRING IN v6 SETTINGS', icon: Icons.file_download_outlined, onTap: cmd.importV6),
-    ],
-  );
-}
-
-class _RootMissing extends StatelessWidget {
-  const _RootMissing({required this.model, required this.cmd});
+/// The start page: on a new setup (nothing opened yet), or when the opened folder is not on this PC.
+/// Open a drive with one click, or choose any folder.
+class StartPage extends StatelessWidget {
+  const StartPage({super.key, required this.model, required this.cmd, this.missing});
   final AppModel model;
   final Commands cmd;
+
+  /// The folder that was open and can't be found
+  final String? missing;
+
   @override
-  Widget build(BuildContext context) => _Message(
-    icon: Icons.folder_off_outlined,
-    title: 'Root folder not found on this PC',
-    text:
-        '${model.root}\n\nThe drive may not be connected, or the folder was moved. Pick the folder again, let FIND look for it, or switch to another project in the menu top left.',
-    actions: [
-      Btn('PICK THE FOLDER', icon: Icons.folder_open, kind: BtnKind.on, onTap: cmd.browse),
-      Btn('FIND', icon: Icons.search, onTap: cmd.find),
-      Btn('TRY AGAIN', icon: Icons.refresh, onTap: model.refresh),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final drives = model.drives;
+    final v6 = missing == null && model.settings.projects.isEmpty ? model.v6File : null;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: missing == null ? C.mark : const Color(0xFF3A1E14),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: (missing == null ? C.teal : C.red).withValues(alpha: .5)),
+                ),
+                child: Icon(
+                  missing == null ? Icons.folder_copy_outlined : Icons.folder_off_outlined,
+                  size: 30,
+                  color: missing == null ? C.tealHi : C.red,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                missing == null ? 'Open a drive or a folder' : 'This folder is not on this PC',
+                textAlign: TextAlign.center,
+                style: t(24, color: C.title, w: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                missing == null
+                    ? 'Choose a drive, or any folder (a project\'s master folder works best).\n'
+                          'You can change it any time from the top left.'
+                    : '$missing\n\nThe drive may not be connected, or the folder was moved. Open another one:',
+                textAlign: TextAlign.center,
+                style: t(13, color: C.soft, h: 1.55),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                runSpacing: 10,
+                children: [for (final d in drives) _DriveCard(drive: d, onTap: () => cmd.setRoot(d.root))],
+              ),
+              const SizedBox(height: 22),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 6,
+                runSpacing: 8,
+                children: [
+                  Btn('CHOOSE A FOLDER ...', icon: Icons.folder_open, kind: BtnKind.on, onTap: cmd.browse),
+                  Btn('TYPE A PATH', icon: Icons.edit_note, onTap: cmd.typePath),
+                  Btn(
+                    'FIND PROJECTS',
+                    icon: Icons.search,
+                    onTap: cmd.find,
+                    tip: 'Look on every drive for project folders',
+                  ),
+                  if (missing != null) ...[
+                    Btn('TRY AGAIN', icon: Icons.refresh, kind: BtnKind.ghost, onTap: model.refresh),
+                    Btn(
+                      'REMOVE FROM THE LIST',
+                      icon: Icons.playlist_remove,
+                      kind: BtnKind.ghost,
+                      onTap: () => cmd.forgetProject(model.settings.current),
+                    ),
+                  ],
+                ],
+              ),
+              if (v6 != null) ...[
+                const SizedBox(height: 26),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+                  decoration: BoxDecoration(
+                    color: C.rowTop,
+                    border: Border.all(color: C.rowEdge),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.history, size: 16, color: C.label),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Settings from Project Folder Manager 6.2 are on this PC.',
+                          style: t(12, color: C.soft),
+                        ),
+                      ),
+                      Btn('BRING THEM IN', kind: BtnKind.ghost, onTap: () => cmd.importV6(v6.path)),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DriveCard extends StatelessWidget {
+  const _DriveCard({required this.drive, required this.onTap});
+  final DriveInfo drive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = drive;
+    final pct = d.usedPercent;
+    final bar = pct >= 90 ? C.barHot : (pct >= 75 ? C.barMid : C.barOk);
+    return Opacity(
+      opacity: d.ready ? 1 : .45,
+      child: Hover(
+        cursor: d.ready ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        builder: (context, h) => Tooltip(
+          message: d.ready ? 'Open ${d.root}' : 'No media in this drive',
+          child: GestureDetector(
+            onTap: d.ready ? onTap : null,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 100),
+              width: 220,
+              padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+              decoration: BoxDecoration(
+                color: h && d.ready ? C.rowHoverTop : C.rowTop,
+                border: Border.all(color: h && d.ready ? C.teal : C.rowEdge),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.storage_rounded, size: 26, color: h && d.ready ? C.tealHi : C.label),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '${d.letter}:  ',
+                                style: t(14, color: C.tealHi, w: FontWeight.bold),
+                              ),
+                              TextSpan(
+                                text: d.label.isNotEmpty ? d.label : d.type,
+                                style: t(13, color: C.white, w: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          d.ready ? '${driveSize(d.free)} free of ${driveSize(d.total)}' : '${d.type}, not ready',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: t(11, color: C.muted),
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: d.ready ? pct / 100 : 0,
+                            minHeight: 4,
+                            backgroundColor: C.barTrack,
+                            color: bar,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Empty extends StatelessWidget {
@@ -525,12 +772,12 @@ class _Empty extends StatelessWidget {
   final Commands cmd;
   @override
   Widget build(BuildContext context) {
-    final filtered = model.query.trim().isNotEmpty || model.discipline.isNotEmpty || model.options.hideMissing;
+    final filtered = model.query.trim().isNotEmpty || model.discipline.isNotEmpty;
     if (filtered) {
       return Padding(
         padding: const EdgeInsets.all(30),
         child: Text(
-          'No module matches${model.query.trim().isNotEmpty ? ' "${model.query.trim()}"' : ''}'
+          'No folder matches${model.query.trim().isNotEmpty ? ' "${model.query.trim()}"' : ''}'
           '${model.discipline.isNotEmpty ? ' in ${model.discipline}' : ''}.'
           '${model.index.isEmpty ? '' : ' Turn DEEP on to search every folder and file.'}',
           style: t(13, color: C.muted),
@@ -539,9 +786,10 @@ class _Empty extends StatelessWidget {
     }
     return _Message(
       icon: Icons.create_new_folder_outlined,
-      title: 'No folders in this project yet',
+      title: 'No folders in here yet',
       text:
-          '${model.root}\n\nMake the standard modules (00_Admin … 99_Archive), or add your own folders and choose LIST → Scan.',
+          '${model.root}\n\nMake the standard project folders (00_Admin … 99_Archive), or add your own: they show up '
+          'here by themselves.',
       actions: [
         Btn(
           'MAKE THE STANDARD FOLDERS',
@@ -549,7 +797,7 @@ class _Empty extends StatelessWidget {
           kind: BtnKind.on,
           onTap: cmd.offerStandardFolders,
         ),
-        Btn('SCAN FOR FOLDERS', icon: Icons.refresh, onTap: cmd.scan),
+        Btn('OPEN ANOTHER FOLDER', icon: Icons.folder_open, onTap: cmd.browse),
       ],
     );
   }

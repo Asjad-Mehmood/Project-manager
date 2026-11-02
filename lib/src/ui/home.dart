@@ -1,4 +1,4 @@
-// The window: banner, toolbar, drives, then the tree and the panel in one of the six layouts,
+// The window: the top bar, the drives strip, then the tree and the panel in one of the six layouts,
 // and the status line. Also the keyboard: Alt+1 … Alt+6 for the views (as v6.2), and in the
 // panel Ctrl+C / X / V / A, Delete, F2 and Esc (as v6.2) plus Ctrl+Z, Enter, Backspace, the
 // arrow keys, F5, Ctrl+F and Alt+Left / Right (new).
@@ -10,10 +10,9 @@ import 'package:flutter/services.dart';
 import '../state/app_model.dart';
 import 'bottom.dart';
 import 'commands.dart';
-import 'header.dart';
 import 'module_list.dart';
 import 'side_panel.dart';
-import 'toolbar.dart';
+import 'top_bar.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key, required this.model, this.clock, this.onCheckUpdates});
@@ -42,7 +41,7 @@ class _HomeState extends State<Home> {
     super.initState();
     m.addListener(_sync);
     _sync();
-    if (m.options.drives) m.refreshDrives();
+    m.refreshDrives(); // the start page and the drives strip show them
   }
 
   /// Fields follow the model when the project or the panel's folder changes
@@ -158,13 +157,13 @@ class _HomeState extends State<Home> {
                 children: [
                   Column(
                     children: [
-                      Header(model: m, width: w, onEditTitle: cmd.editTitle, clock: widget.clock),
-                      Toolbar(
+                      TopBar(
                         model: m,
                         cmd: cmd,
                         searchField: _search,
                         searchFocus: _searchFocus,
                         onCheckUpdates: () => widget.onCheckUpdates?.call(context),
+                        clock: widget.clock,
                       ),
                       if (m.options.drives) DrivesStrip(model: m, cmd: cmd),
                       Expanded(child: _body(w)),

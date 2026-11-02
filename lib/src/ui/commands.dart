@@ -41,11 +41,10 @@ class Commands {
   Future<void> setRoot(String path) async {
     final why = model.setRoot(path);
     if (why != null) {
-      await message(context, 'OPEN A PROJECT', why);
+      await message(context, 'OPEN A FOLDER', why);
       return;
     }
-    final pr = model.project;
-    if (pr != null && pr.modules.isEmpty && context.mounted) await offerStandardFolders();
+    if (model.project != null && model.modules.isEmpty && context.mounted) await offerStandardFolders();
   }
 
   Future<void> browse() async {
@@ -62,7 +61,7 @@ class Commands {
       await message(
         context,
         'FIND',
-        'No drive could be read on this PC.\n\nPick the project folder from the project menu instead.',
+        'No drive could be read on this PC.\n\nChoose the folder from the menu top left instead.',
       );
       return;
     }
@@ -73,8 +72,8 @@ class Commands {
   Future<void> offerStandardFolders() async {
     final yes = await confirm(
       context,
-      'AN EMPTY PROJECT',
-      '${model.root}\n\nhas no folders yet. Make the standard modules?',
+      'AN EMPTY FOLDER',
+      '${model.root}\n\nhas no folders inside yet. Make the standard project folders?',
       yes: 'MAKE THEM',
       lines: const [
         '00_Admin  10_Survey  20_Piping  30_Electrical  40_Telecom  50_Civil Works',
@@ -90,73 +89,18 @@ class Commands {
 
   Future<void> openRoot() async {
     if (!model.rootExists) {
-      await message(context, 'OPEN IN EXPLORER', 'Root folder not found on this PC:\n\n   ${model.root}');
+      await message(context, 'OPEN IN EXPLORER', 'This folder is not on this PC:\n\n   ${model.root}');
       return;
     }
     await model.shell.openFolder(model.root);
   }
 
-  void scan() {
-    if (!model.rootExists) {
-      _noRoot();
-      return;
-    }
-    final added = model.scan();
-    toast(
-      added.isEmpty ? 'No new top-level folders on disk.' : '${added.length} new folder(s) added: ${added.join(', ')}',
-    );
-  }
-
-  Future<void> rebuild() async {
-    if (!model.rootExists) return _noRoot();
-    final ok = await confirm(
-      context,
-      'REBUILD THE LIST FROM THIS PC',
-      '${model.root}\n\nThe stored list is replaced by the folders actually on this machine. Disciplines are kept '
-          'for names that still match, and guessed from the number for the rest.',
-      yes: 'REBUILD',
-    );
-    if (!ok) return;
-    final n = model.rebuild();
-    toast('List rebuilt: $n folder(s) found on this PC.');
-  }
-
-  Future<void> fixNames() async {
-    if (!model.rootExists) return _noRoot();
-    final r = model.fixNames();
-    if (r.lost.isEmpty) {
-      toast(r.fixed.isEmpty ? 'Every module name matches its folder.' : '${r.fixed.length} name(s) repaired.');
-      return;
-    }
-    final make = await confirm(
-      context,
-      'FIX NAMES',
-      '${r.fixed.length} name(s) repaired.\n\n${r.lost.length} not found on this PC. Make those folders, or use '
-          'LIST → Rebuild to drop them, or LIST → Hide missing to hide them.',
-      yes: 'MAKE THE FOLDERS',
-      no: 'LEAVE THEM',
-      lines: [for (final (a, b) in r.fixed) '$a  →  $b', ...r.lost.map((l) => '$l    not found')],
-    );
-    if (make) {
-      final failed = await model.createMissing();
-      if (failed.isNotEmpty && context.mounted) {
-        await message(context, 'SOME FOLDERS WERE NOT MADE', 'These could not be made:', lines: failed);
-      }
-    }
-  }
-
-  Future<void> _noRoot() => message(
-    context,
-    'OPEN A PROJECT',
-    'Root folder not found on this PC:\n\n   ${model.root}\n\nOpen it from the project menu (top left) first.',
-  );
-
   Future<void> editTitle() async {
     if (model.project == null) return;
     final n = await ask(
       context,
-      'PROJECT NAME',
-      'Shown at the top left. Leave it empty for "PROJECT FOLDER MANAGER".',
+      'NAME',
+      'The name shown at the top left. Leave it empty for the folder\'s own name; nothing on the disk changes.',
       initial: model.project!.title,
     );
     if (n != null) model.setTitle(n);
@@ -166,15 +110,15 @@ class Commands {
     final pr = model.settings.projects[i];
     final ok = await confirm(
       context,
-      'TAKE OFF THE LIST',
+      'REMOVE FROM THE LIST',
       '${pr.title.isEmpty ? pr.root : '${pr.title}\n${pr.root}'}\n\nOnly the list forgets it: nothing on the disk changes.',
-      yes: 'TAKE IT OFF',
+      yes: 'REMOVE',
     );
     if (ok) model.forgetProject(i);
   }
 
-  Future<void> importV6() async {
-    final f = await model.shell.pickFile(label: 'Project Folder Manager settings', extensions: const ['txt']);
+  Future<void> importV6([String? file]) async {
+    final f = file ?? await model.shell.pickFile(label: 'Project Folder Manager settings', extensions: const ['txt']);
     if (f == null) return;
     final why = model.importV6(f);
     if (!context.mounted) return;
@@ -185,15 +129,17 @@ class Commands {
     }
   }
 
-  /// ROOT PATH and SET: type or paste the project's folder
+  /// Type or paste the folder (or drive) to open
   Future<void> typePath() async {
     final v = await ask(
       context,
-      'OPEN A PROJECT',
-      'Type or paste the project\'s master folder, for example D:\\Project',
+      'OPEN A FOLDER',
+      'Type or paste a folder or a drive, for example D:\\Projects\\North Gas or D:',
       initial: model.root,
       ok: 'OPEN',
-      check: (x) => folderExists(x) ? null : 'that folder is not on this PC',
+      check: (x) => folderExists(x) || RegExp(r'^[A-Za-z]:$').hasMatch(x.trim()) && folderExists('${x.trim()}\\')
+          ? null
+          : 'that folder is not on this PC',
     );
     if (v != null) await setRoot(v);
   }
@@ -222,7 +168,8 @@ class Commands {
   Future<void> about() => message(
     context,
     '$appName  v$appVersion',
-    'A dashboard for a project\'s master folder.\n\nSettings: ${model.store.settingsDir}\nIndex: ${model.store.dataDir}\n\n'
+    'A dashboard for your project folders: open a drive or any folder, see its folders by discipline, search everything, '
+        'and copy, move and rename without leaving it.\n\nSettings: ${model.store.settingsDir}\nIndex: ${model.store.dataDir}\n\n'
         'Updates arrive by themselves: the program checks when it opens.\n$appPage',
   );
 

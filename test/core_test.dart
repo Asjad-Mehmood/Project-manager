@@ -5,7 +5,6 @@ import 'package:path/path.dart' as p;
 import 'package:project_folder_manager/src/core/disciplines.dart';
 import 'package:project_folder_manager/src/core/disk.dart';
 import 'package:project_folder_manager/src/core/format.dart';
-import 'package:project_folder_manager/src/core/modules.dart';
 import 'package:project_folder_manager/src/core/names.dart';
 import 'package:project_folder_manager/src/core/project_finder.dart';
 import 'package:project_folder_manager/src/core/settings.dart';
@@ -167,37 +166,6 @@ void main() {
       expect(damaged.options.layout, 5);
       expect(damaged.options.depth, 1);
       expect(Settings.fromJson('x').projects, isEmpty);
-    });
-  });
-
-  group('modules', () {
-    List<Module> mods(List<String> names) => [for (final n in names) Module(n, guessDiscipline(n))];
-
-    test('REBUILD keeps disciplines of names that still match', () {
-      final old = mods(['10_Survey', '20_Piping'])..first.discipline = 'HSE';
-      final r = rebuildModules(old, ['10_Survey', '30_Electrical']);
-      expect([for (final m in r) '${m.name}|${m.discipline}'], ['10_Survey|HSE', '30_Electrical|Electrical']);
-    });
-
-    test('SCAN adds only new folders, ignoring case', () {
-      final m = mods(['10_Survey']);
-      expect(addNewModules(m, ['10_SURVEY', '20_Piping']), ['20_Piping']);
-      expect(m, hasLength(2));
-    });
-
-    test('FIX NAMES follows case, space, _ and - changes', () {
-      final m = mods(['10_survey', '20 Piping', '30-Electrical', '40_Gone', '50_Civil Works']);
-      final r = fixModuleNames(m, ['10_Survey', '20_Piping', '30_Electrical', '50_Civil Works']);
-      expect(r.fixed, [('10_survey', '10_Survey'), ('20 Piping', '20_Piping'), ('30-Electrical', '30_Electrical')]);
-      expect(r.lost, ['40_Gone']);
-      expect(m[1].name, '20_Piping');
-    });
-
-    test('the list heals itself when most of it is gone', () {
-      final m = mods(['a', 'b', 'c']);
-      expect(healNeeded(m, (n) => n == 'a'), isTrue);
-      expect(healNeeded(m, (n) => n != 'c'), isFalse);
-      expect(healNeeded([], (_) => true), isTrue);
     });
   });
 

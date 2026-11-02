@@ -21,7 +21,7 @@ class DrivesStrip extends StatelessWidget {
     final rootLetter = model.root.isEmpty ? '' : model.root[0].toUpperCase();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 7, 18, 8),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
       decoration: const BoxDecoration(
         color: C.driveStrip,
         border: Border(bottom: BorderSide(color: C.driveStripEdge)),
@@ -47,21 +47,15 @@ class DrivesStrip extends StatelessWidget {
           message: d.ready ? 'Open ${d.root} in the panel' : 'No media in this drive',
           child: GestureDetector(
             onTap: d.ready ? () => cmd.view(d.root) : null,
-            child: Container(
-              width: 188,
-              margin: const EdgeInsets.only(right: 9),
-              padding: const EdgeInsets.fromLTRB(9, 6, 9, 7),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 100),
+              width: 196,
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
               decoration: BoxDecoration(
-                gradient: h && d.ready
-                    ? null
-                    : const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [C.driveTop, C.driveBottom],
-                      ),
-                color: h && d.ready ? const Color(0xFF163049) : null,
-                border: Border.all(color: h && d.ready ? const Color(0xFF2F7F8F) : C.driveEdge),
-                borderRadius: BorderRadius.circular(4),
+                color: h && d.ready ? C.rowHoverTop : C.driveTop,
+                border: Border.all(color: h && d.ready ? C.teal : (isRoot ? C.rowHoverEdge : C.driveEdge)),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,7 +64,7 @@ class DrivesStrip extends StatelessWidget {
                     children: [
                       Text(
                         '${d.letter}:',
-                        style: t(12, color: C.tealHi, w: FontWeight.bold, m: true),
+                        style: t(13, color: C.tealHi, w: FontWeight.bold),
                       ),
                       const SizedBox(width: 6),
                       Flexible(
@@ -78,35 +72,32 @@ class DrivesStrip extends StatelessWidget {
                           name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: t(12, color: C.title, w: FontWeight.bold),
+                          style: t(12, color: C.title, w: FontWeight.w600),
                         ),
                       ),
                       if (isRoot)
                         const Padding(
-                          padding: EdgeInsets.only(left: 4),
-                          child: Icon(Icons.star, size: 12, color: C.gold),
+                          padding: EdgeInsets.only(left: 5),
+                          child: Tooltip(
+                            message: 'The open folder is on this drive',
+                            child: Icon(Icons.circle, size: 7, color: C.teal),
+                          ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    d.ready
-                        ? '${driveSize(d.free)} free of ${driveSize(d.total)}  ·  $pct% used'
-                        : '${d.type}  ·  not ready',
-                    style: t(9, color: C.label, ls: .3),
+                    d.ready ? '${driveSize(d.free)} free of ${driveSize(d.total)}' : '${d.type}, not ready',
+                    style: t(10, color: C.muted),
                   ),
-                  const SizedBox(height: 5),
-                  Container(
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: C.barTrack,
-                      border: Border.all(color: C.driveEdge),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: d.ready ? pct / 100 : 0,
-                      child: Container(color: bar),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: d.ready ? pct / 100 : 0,
+                      minHeight: 4,
+                      backgroundColor: C.barTrack,
+                      color: bar,
                     ),
                   ),
                 ],

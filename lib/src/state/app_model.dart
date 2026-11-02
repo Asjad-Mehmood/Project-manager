@@ -12,7 +12,6 @@ import '../core/disciplines.dart';
 import '../core/disk.dart';
 import '../core/file_ops.dart';
 import '../core/indexer.dart';
-import '../core/modules.dart';
 import '../core/search_index.dart';
 import '../core/settings.dart';
 import '../platform/shell.dart';
@@ -60,6 +59,11 @@ const layoutNames = [
   'Panel only',
 ];
 
+/// A folder at the top of the opened folder is listed, unless it is one of Windows' own at the top
+/// of a drive (Recycle Bin, System Volume Information, Windows, Program Files …)
+bool shownAtTop(String name, {required bool atDrive}) =>
+    !atDrive || !(skipAtTop.contains(name.toLowerCase()) || name.startsWith(r'$'));
+
 class AppModel extends ChangeNotifier {
   AppModel({required this.store, required this.shell, DateTime Function()? clock, this.env})
     : now = clock ?? DateTime.now;
@@ -79,21 +83,14 @@ class AppModel extends ChangeNotifier {
 
   // ---------------------------------------------------------------- start
 
-  /// Loads the settings; on the very first start, brings in a v6.2 copy's settings if one is found
+  /// Loads the settings. A new setup opens nothing: the start page asks for a drive or a folder.
   void start() {
-    final loaded = store.loadSettings();
-    settings = loaded ?? Settings();
-    if (!settings.v6Checked) {
-      settings.v6Checked = true;
-      if (settings.projects.isEmpty) {
-        for (final f in findV6Configs(env ?? Platform.environment)) {
-          if (importV6(f.path) == null) break;
-        }
-      }
-      _save();
-    }
+    settings = store.loadSettings() ?? Settings();
     _openCurrent();
   }
+
+  /// A settings file from a 6.2 copy on this PC (the start page offers to bring it in)
+  File? get v6File => findV6Configs(env ?? Platform.environment).firstOrNull;
 
   /// Brings in a v6.2 Project_Folder_Manager_config.txt; returns why not, or null
   String? importV6(String file) {
@@ -149,10 +146,14 @@ class AppModel extends ChangeNotifier {
   bool get rootExists => folderExists(root);
   Options get options => settings.options;
 
-  /// Top left: the title the user gave the project, or the program's name
+  /// Top left: the name the user gave the folder, or the folder's own name (a drive: "D:\\")
   String get title {
-    final t = project?.title.trim() ?? '';
-    return t.isEmpty ? 'PROJECT FOLDER MANAGER' : t;
+    final pr = project;
+    if (pr == null) return 'Project Folder Manager';
+    final t = pr.title.trim();
+    if (t.isNotEmpty) return t;
+    final b = p.basename(pr.root);
+    return b.isEmpty || b == pr.root ? pr.root : b;
   }
 
   void _openCurrent() {
@@ -167,24 +168,19 @@ class AppModel extends ChangeNotifier {
       return;
     }
     pr.opened = now();
-    if (folderExists(pr.root)) {
-      final otherPc = pr.pc.isNotEmpty && pr.pc != shell.computerName;
-      if (otherPc || healNeeded(pr.modules, (n) => folderExists(p.join(pr.root, n)))) {
-        _rebuild(quiet: true);
-      }
-      pr.pc = shell.computerName;
-    }
+    if (folderExists(pr.root)) pr.pc = shell.computerName;
     index = store.loadIndex(pr.root) ?? SearchIndex(root: pr.root);
     if (options.tree) expandAll();
     _save();
-    status = index.isEmpty ? 'tip: the project is indexed by itself in the background; INDEX has more' : 'ready';
+    status = index.isEmpty ? 'tip: the folder is indexed by itself in the background, so search is instant' : 'ready';
     notifyListeners();
     autoIndexIfStale();
   }
 
-  /// SET: opens [path] as the project, adding it to the list if it is new; returns why not
+  /// Opens [path] (a drive or any folder), adding it to the recent list if it is new; returns why not
   String? setRoot(String path) {
-    final r = path.trim();
+    var r = path.trim();
+    if (RegExp(r'^[A-Za-z]:$').hasMatch(r)) r = '$r\\'; // "D:" means the drive, not its current folder
     if (!folderExists(r)) return 'That folder does not exist:\n\n   $r';
     final at = _projectIndex(r);
     if (at >= 0) {
@@ -192,11 +188,11 @@ class AppModel extends ChangeNotifier {
     } else {
       settings.projects.add(Project(root: r, pc: shell.computerName));
       settings.current = settings.projects.length - 1;
-      _rebuild(quiet: true);
     }
+    closePanel();
     _save();
     _openCurrent();
-    say('project opened: $r');
+    say('opened: $r');
     return null;
   }
 
@@ -230,66 +226,20 @@ class AppModel extends ChangeNotifier {
     say(t.trim().isEmpty ? 'title cleared' : 'title set to: ${t.trim()}');
   }
 
-  List<String> _diskModules() => [for (final e in cache.folders(root)) e.name];
-
-  void _rebuild({bool quiet = false}) {
+  /// The folders in the opened folder, read from the disk each time, so the list is never out of
+  /// step: new folders show up, renamed or deleted ones follow. A discipline the user chose is kept
+  /// by name; the rest are guessed from the number. At the top of a drive, Windows' own folders
+  /// (Recycle Bin, System Volume Information …) are left out.
+  List<Module> get modules {
     final pr = project;
-    if (pr == null) return;
-    cache.forget(pr.root);
-    final next = rebuildModules(pr.modules, _diskModules());
-    pr.modules
-      ..clear()
-      ..addAll(next);
-    if (!quiet) {
-      _save();
-      notifyListeners();
-    }
-  }
-
-  /// REBUILD; returns how many folders are in the list now
-  int rebuild() {
-    _rebuild();
-    openFolders.clear();
-    say('list rebuilt: ${project?.modules.length ?? 0} folder(s) on this PC');
-    return project?.modules.length ?? 0;
-  }
-
-  /// SCAN; returns the folders added
-  List<String> scan() {
-    final pr = project;
-    if (pr == null) return const [];
-    cache.forget(root);
-    final added = addNewModules(pr.modules, _diskModules());
-    _save();
-    say(added.isEmpty ? 'no new top-level folders on disk' : '${added.length} new folder(s) added');
-    return added;
-  }
-
-  FixResult fixNames() {
-    final pr = project;
-    if (pr == null) return FixResult();
-    cache.forget(root);
-    final r = fixModuleNames(pr.modules, _diskModules());
-    _save();
-    say('${r.fixed.length} name(s) repaired${r.lost.isEmpty ? '' : ', ${r.lost.length} not found'}');
-    return r;
-  }
-
-  /// New in v7: makes the folders of modules that aren't on the disk; returns those that failed
-  Future<List<String>> createMissing() async {
-    final failed = <String>[];
-    for (final m in project?.modules ?? <Module>[]) {
-      final path = p.join(root, m.name);
-      if (folderExists(path)) continue;
-      try {
-        await Directory(path).create(recursive: true);
-      } catch (e) {
-        failed.add(m.name);
-      }
-    }
-    cache.clear();
-    say('missing folders made');
-    return failed;
+    if (pr == null || !rootExists) return const [];
+    final chosen = {for (final m in pr.modules) m.name.toLowerCase(): m};
+    final atDrive = pathKey(root) == pathKey(p.rootPrefix(root));
+    return [
+      for (final e in cache.folders(root))
+        if (shownAtTop(e.name, atDrive: atDrive))
+          chosen[e.name.toLowerCase()] ?? Module(e.name, guessDiscipline(e.name)),
+    ];
   }
 
   /// New in v7: an empty project gets the standard 00_Admin … 99_Archive folders
@@ -303,13 +253,18 @@ class AppModel extends ChangeNotifier {
       }
     }
     cache.clear();
-    scan();
+    notifyListeners();
     return failed;
   }
 
   void setDiscipline(String moduleName, String discipline) {
-    for (final m in project?.modules ?? <Module>[]) {
-      if (m.name == moduleName) m.discipline = discipline;
+    final pr = project;
+    if (pr == null) return;
+    final m = pr.modules.where((x) => x.name.toLowerCase() == moduleName.toLowerCase()).firstOrNull;
+    if (m == null) {
+      pr.modules.add(Module(moduleName, discipline));
+    } else {
+      m.discipline = discipline;
     }
     _save();
     notifyListeners();
@@ -340,7 +295,7 @@ class AppModel extends ChangeNotifier {
       }
     }
 
-    for (final m in project?.modules ?? <Module>[]) {
+    for (final m in modules) {
       final path = p.join(root, m.name);
       openFolders.add(pathKey(path));
       mark(path, 1);
@@ -367,12 +322,6 @@ class AppModel extends ChangeNotifier {
 
   void setDeep(bool on) {
     options.deep = on;
-    _save();
-    notifyListeners();
-  }
-
-  void setHideMissing(bool on) {
-    options.hideMissing = on;
     _save();
     notifyListeners();
   }
@@ -426,26 +375,48 @@ class AppModel extends ChangeNotifier {
     say('re-read from disk${index.isEmpty ? '' : ' - INDEX → Index this project refreshes the index too'}');
   }
 
-  /// The four numbers top right: modules, on disk, indexed, missing
-  (int, int, int, int) get kpis {
-    final mods = project?.modules ?? const <Module>[];
-    final on = mods.where((m) => folderExists(p.join(root, m.name))).length;
-    return (mods.length, on, _building?.length ?? index.length, mods.length - on);
+  Timer? _watch;
+
+  /// Looks at the disk every few seconds, so folders made, renamed or deleted in Explorer show up
+  /// by themselves (nothing to scan or rebuild)
+  void watchDisk({Duration every = const Duration(seconds: 3)}) {
+    _watch?.cancel();
+    _watch = Timer.periodic(every, (_) => checkDisk());
   }
 
-  /// The module list as filtered by MISSING, DISCIPLINE and the search box
+  /// Reads the opened folder and the panel's folder again; true (and the window redraws) when
+  /// something in them changed
+  bool checkDisk() {
+    if (_disposed || busy) return false;
+    String names(String dir) => [for (final e in cache.entries(dir)) '${e.isDir}${e.name}'].join('\n');
+    var changed = false;
+    for (final dir in {root, ?panelPath}) {
+      if (dir.isEmpty || !cache.has(dir)) continue;
+      final before = names(dir);
+      cache.forget(dir);
+      if (names(dir) != before) changed = true;
+    }
+    if (changed) {
+      _searchCache = null;
+      notifyListeners();
+    }
+    return changed;
+  }
+
+  /// How many items the index holds (while it is being made, how many so far)
+  int get indexedCount => _building?.length ?? index.length;
+
+  /// The folder list as filtered by the discipline and the search box
   List<ModuleRow> moduleRows() {
     final q = query.trim().toLowerCase();
     final out = <ModuleRow>[];
     var n = 0;
-    for (final m in project?.modules ?? const <Module>[]) {
+    for (final m in modules) {
       final path = p.join(root, m.name);
-      final ex = folderExists(path);
-      if (options.hideMissing && !ex) continue;
       if (discipline.isNotEmpty && m.discipline != discipline) continue;
       if (q.isNotEmpty && !m.name.toLowerCase().contains(q)) continue;
       n++;
-      out.add(ModuleRow(n, m, path, ex, ex ? cache.folderCount(path) : 0));
+      out.add(ModuleRow(n, m, path, true, cache.folderCount(path)));
     }
     return out;
   }
@@ -462,7 +433,7 @@ class AppModel extends ChangeNotifier {
     bool Function(String)? where;
     if (discipline.isNotEmpty) {
       final roots = [
-        for (final m in project?.modules ?? const <Module>[])
+        for (final m in modules)
           if (m.discipline == discipline) p.join(root, m.name),
       ];
       where = (path) => roots.any((r) => isSameOrInside(path, r));
@@ -473,7 +444,7 @@ class AppModel extends ChangeNotifier {
 
   /// The discipline of the module [path] is in, if it is inside the project
   String? disciplineOf(String path) {
-    for (final m in project?.modules ?? const <Module>[]) {
+    for (final m in modules) {
       if (isSameOrInside(path, p.join(root, m.name))) return m.discipline;
     }
     return null;
@@ -1008,11 +979,11 @@ class AppModel extends ChangeNotifier {
     return null;
   }
 
-  /// A module's folder renamed inside the program: the list follows it
+  /// A folder at the top renamed inside the program: its chosen discipline goes with it
   void _fixModuleAfterRename(String from, String to) {
     if (pathKey(p.dirname(from)) != pathKey(root)) return;
     for (final m in project?.modules ?? <Module>[]) {
-      if (m.name == p.basename(from)) m.name = p.basename(to);
+      if (m.name.toLowerCase() == p.basename(from).toLowerCase()) m.name = p.basename(to);
     }
     _save();
   }
@@ -1138,6 +1109,7 @@ class AppModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _watch?.cancel();
     _stopIndexQuietly();
     super.dispose();
   }
