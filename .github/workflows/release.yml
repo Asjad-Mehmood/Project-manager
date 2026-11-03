@@ -1,10 +1,10 @@
 name: Build and Release
 
-# Runs when you push a tag such as v7.0.1 (publishing a GitHub release with a new tag does this).
+# Runs when you push a tag such as v2.3.10 (publishing a GitHub release with a new tag does this).
 #
 # This repository is public, so its releases are too: every installed copy reads latest.json and
 # the installer from this repository's latest release. The release description comes from
-# docs/releases/<tag>.md. A release is never made by hand: the files are built here, from the
+# docs/releases/<tag>.md (or, without one, a short text pointing to CHANGELOG.md). A release is never made by hand: the files are built here, from the
 # tagged code, and checked after publishing exactly the way installed copies download them.
 on:
   push:
@@ -27,12 +27,21 @@ jobs:
         shell: pwsh
         run: |
           $ver = "${{ github.ref_name }}".TrimStart('v')
-          if ($ver -notmatch '^\d+\.\d+\.\d+$') { throw "A release tag is v and three numbers, for example v7.0.1. Got: ${{ github.ref_name }}" }
+          if ($ver -notmatch '^\d+\.\d+\.\d+$') { throw "A release tag is v and three numbers, for example v2.3.10. Got: ${{ github.ref_name }}" }
           "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: The release notes are there
+      # docs/releases/<tag>.md is the description; without one, a short text pointing to the changelog
+      - name: Release notes
         shell: bash
-        run: test -f "docs/releases/${GITHUB_REF_NAME}.md" || { echo "Write docs/releases/${GITHUB_REF_NAME}.md first"; exit 1; }
+        run: |
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          if [ ! -f "$notes" ]; then
+            echo "::warning::No $notes, so the release gets a short description. Write one next time."
+            printf '## Project Folder Manager %s\n\nDownload **ProjectFolderManager-Setup.exe** below and open it. Installed copies update themselves.\n\nWhat is new: see [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md).\n' \
+              "${GITHUB_REF_NAME#v}" "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" > release-notes.md
+          else
+            cp "$notes" release-notes.md
+          fi
 
       - uses: subosito/flutter-action@v2
         with:
@@ -78,7 +87,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Project Folder Manager ${{ github.ref_name }}
-          body_path: docs/releases/${{ github.ref_name }}.md
+          body_path: release-notes.md
           make_latest: true
           files: |
             installer/ProjectFolderManager-Setup.exe

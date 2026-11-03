@@ -5,7 +5,7 @@ open a drive or any folder and see the folders in it with their discipline colou
 99 Archive), search every folder and file instantly, and view, copy, move, rename and tidy them in
 a side panel without leaving the dashboard.
 
-Version 7 is the 6.2 HTML application rebuilt in Flutter as a proper installed program that updates
+Version 2.3.9 is the 6.2 HTML application rebuilt in Flutter as a proper installed program that updates
 itself, with a cleaner look. See [CHANGELOG.md](CHANGELOG.md) for what is new.
 
 ![The dashboard](docs/screenshots/1-dashboard.png)
@@ -34,6 +34,7 @@ in Explorer show up by themselves. There is nothing to scan or rebuild.
 | **INDEX ▾** | Index this folder, the whole drive or all drives; Stop keeps what was found. The open folder also indexes itself in the background. |
 | **GO TO ▾** | Pinned folders (right-click any folder → Pin) and every drive, in the panel. |
 | **View ▾** | The six layouts (Alt+1 to Alt+6) and the drives strip. |
+| **MANUAL** (F1) | How to use every part of the program, topic by topic. |
 | **⋯** | Bring in 6.2 settings, look for an update, keyboard shortcuts, about. |
 | **The clock** | Click it for the calendar. |
 | **Above the list** | How many folders, the index, EXPAND ALL, COLLAPSE and refresh (F5). |
@@ -47,8 +48,10 @@ Settings live in `%APPDATA%\Excel to KML\Project Folder Manager\settings.json`, 
 ## Releases
 A release is made by pushing a tag, never by hand:
 
-1. Write `docs/releases/v7.0.1.md` (the release's description) and add a line to `CHANGELOG.md`.
-2. Merge to `main`, then tag: `git tag v7.0.1 && git push origin v7.0.1`.
+1. Write `docs/releases/v2.3.10.md` (the release's description) and add a line to `CHANGELOG.md`.
+   Without it the release still goes out, with a short description pointing to the changelog.
+2. Merge to `main`, then tag: `git tag v2.3.10 && git push origin v2.3.10` (or publish a release
+   with a new tag on GitHub).
 3. [`release.yml`](.github/workflows/release.yml) runs the tests, builds the program and the
    installer on Windows, installs and checks that very installer (`tool/windows_check.ps1`),
    writes `latest.json` (version and SHA-256) and publishes both files as the latest release; a

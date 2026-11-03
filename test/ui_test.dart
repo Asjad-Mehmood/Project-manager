@@ -360,6 +360,37 @@ void main() {
     await close();
   });
 
+  testWidgets('MANUAL in the top bar (and F1) explains every part, topic by topic', (tester) async {
+    final h = _project();
+    addTearDown(h.dispose);
+    await _show(tester, h);
+    await tester.tap(_btn('MANUAL'));
+    await tester.pumpAndSettle();
+    expect(find.text('How to use Project Folder Manager'), findsOneWidget);
+    expect(find.text('Change the folder'), findsOneWidget);
+    await tester.tap(find.text('The side panel'));
+    await tester.pump();
+    expect(find.text('UNDO (Ctrl+Z)'), findsOneWidget);
+    await _shot(tester, '9-manual');
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(_btn('NEXT')); // topics 6 … 9
+      await tester.pump();
+    }
+    expect(find.text('Updates and settings'), findsWidgets);
+    await tester.tap(_btn('DONE'));
+    await tester.pumpAndSettle();
+    expect(find.text('Manual'), findsNothing);
+
+    await _keys(tester, [], LogicalKeyboardKey.f1);
+    await tester.pumpAndSettle();
+    expect(find.text('Getting started'), findsWidgets);
+    for (final size in const [Size(1366, 768), Size(800, 600)]) {
+      await _show(tester, h, size: size);
+      await tester.pump();
+      expect(tester.takeException(), isNull, reason: '$size');
+    }
+  });
+
   testWidgets('a new setup: the start page asks for a drive or a folder', (tester) async {
     final h = Harness.make(settingsJson: '{"options": {"autoIndex": false}}');
     addTearDown(h.dispose);
@@ -369,6 +400,8 @@ void main() {
     expect(find.textContaining('Projects', findRichText: true), findsOneWidget); // drive D:
     expect(find.text('384 GB free of 931 GB'), findsOneWidget);
     expect(_btn('CHOOSE A FOLDER ...'), findsOneWidget);
+    expect(_btn('HOW TO USE IT'), findsOneWidget);
+    expect(_btn('MANUAL'), findsOneWidget);
     await _shot(tester, '6-start');
 
     h.shell.folderToPick = h.root.path;

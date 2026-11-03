@@ -641,6 +641,8 @@ class StartPage extends StatelessWidget {
                     onTap: cmd.find,
                     tip: 'Look on every drive for project folders',
                   ),
+                  if (missing == null)
+                    Btn('HOW TO USE IT', icon: Icons.menu_book_outlined, kind: BtnKind.ghost, onTap: cmd.manual),
                   if (missing != null) ...[
                     Btn('TRY AGAIN', icon: Icons.refresh, kind: BtnKind.ghost, onTap: model.refresh),
                     Btn(

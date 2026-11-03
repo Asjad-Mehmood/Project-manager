@@ -61,6 +61,7 @@ class TopBar extends StatelessWidget {
           if (model.project == null) ...[
             // nothing open yet: only what helps to start
             const Spacer(),
+            _manual(false),
             _more(),
             ..._clock(w),
           ] else
@@ -100,6 +101,7 @@ class TopBar extends StatelessWidget {
     _index(compact),
     _goTo(compact),
     _ViewPicker(model: model, cmd: cmd),
+    _manual(compact),
     _more(),
     ..._clock(w),
   ];
@@ -254,6 +256,14 @@ class TopBar extends StatelessWidget {
     );
   }
 
+  Widget _manual(bool compact) => Btn(
+    compact ? '' : 'MANUAL',
+    icon: Icons.menu_book_outlined,
+    kind: BtnKind.ghost,
+    tip: 'How to use the program  (F1)',
+    onTap: cmd.manual,
+  );
+
   Widget _more() => MenuBtn(
     '',
     icon: Icons.more_horiz,
@@ -262,6 +272,7 @@ class TopBar extends StatelessWidget {
     items: () => [
       menuItem('Bring in settings from 6.2 ...', cmd.importV6, icon: Icons.file_download_outlined),
       menuItem('Look for an update', onCheckUpdates, icon: Icons.system_update_alt),
+      menuItem('Manual  (F1)', cmd.manual, icon: Icons.menu_book_outlined),
       menuItem('Keyboard shortcuts', cmd.shortcuts, icon: Icons.keyboard_outlined),
       menuItem('About', cmd.about, icon: Icons.info_outline),
     ],

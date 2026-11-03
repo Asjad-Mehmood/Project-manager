@@ -15,6 +15,7 @@ import '../state/app_model.dart';
 import '../state/store.dart';
 import 'dialogs/dialogs.dart';
 import 'dialogs/list_edit.dart';
+import 'dialogs/manual.dart';
 import 'theme.dart';
 
 class Commands {
@@ -144,11 +145,15 @@ class Commands {
     if (v != null) await setRoot(v);
   }
 
+  /// MANUAL (F1): how to use the program
+  Future<void> manual() => showManual(context);
+
   Future<void> shortcuts() => message(
     context,
     'KEYBOARD SHORTCUTS',
     'Anywhere',
     lines: const [
+      'F1                the manual',
       'Alt+1 … Alt+6     the six views',
       'Ctrl+F            search',
       'F5                read the disk again',

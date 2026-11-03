@@ -103,6 +103,10 @@ class _HomeState extends State<Home> {
       _search.selection = TextSelection(baseOffset: 0, extentOffset: _search.text.length);
       return KeyEventResult.handled;
     }
+    if (key == LogicalKeyboardKey.f1) {
+      unawaited(cmd.manual());
+      return KeyEventResult.handled;
+    }
     if (key == LogicalKeyboardKey.f5) {
       m.refresh();
       return KeyEventResult.handled;

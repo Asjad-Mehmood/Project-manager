@@ -114,7 +114,8 @@ class Harness {
   final AppModel model;
   final Directory root;
 
-  String at(String rel) => p.join(root.path, rel);
+  /// A path inside the project, with this system's separators (\ on Windows)
+  String at(String rel) => p.normalize(p.join(root.path, rel));
 
   void dispose() {
     model.dispose();
