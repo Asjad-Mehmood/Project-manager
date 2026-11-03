@@ -1,6 +1,6 @@
 name: Build and Release
 
-# Runs when you push a tag such as v2.3.10 (publishing a GitHub release with a new tag does this).
+# Runs when you push a tag such as v7.0.1 (publishing a GitHub release with a new tag does this).
 #
 # This repository is public, so its releases are too: every installed copy reads latest.json and
 # the installer from this repository's latest release. The release description comes from
@@ -27,7 +27,7 @@ jobs:
         shell: pwsh
         run: |
           $ver = "${{ github.ref_name }}".TrimStart('v')
-          if ($ver -notmatch '^\d+\.\d+\.\d+$') { throw "A release tag is v and three numbers, for example v2.3.10. Got: ${{ github.ref_name }}" }
+          if ($ver -notmatch '^\d+\.\d+\.\d+$') { throw "A release tag is v and three numbers, for example v7.0.1. Got: ${{ github.ref_name }}" }
           "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       # docs/releases/<tag>.md is the description; without one, a short text pointing to the changelog

@@ -5,7 +5,7 @@
 ; Uninstall also removes the program's settings and index from AppData.
 Unicode true
 !ifndef VERSION
-  !define VERSION "2.3.9"
+  !define VERSION "7.0.0"
 !endif
 !ifndef SOURCE
   !define SOURCE "..\build\windows\x64\runner\Release"

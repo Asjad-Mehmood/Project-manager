@@ -1,7 +1,7 @@
 name: project_folder_manager
 description: "Project Folder Manager by Excel to KML"
 publish_to: 'none'
-version: 2.3.9+1
+version: 7.0.0+1
 
 environment:
   sdk: ^3.13.5

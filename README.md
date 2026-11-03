@@ -5,7 +5,7 @@ open a drive or any folder and see the folders in it with their discipline colou
 99 Archive), search every folder and file instantly, and view, copy, move, rename and tidy them in
 a side panel without leaving the dashboard.
 
-Version 2.3.9 is the 6.2 HTML application rebuilt in Flutter as a proper installed program that updates
+Version 7 is the 6.2 HTML application rebuilt in Flutter as a proper installed program that updates
 itself, with a cleaner look. See [CHANGELOG.md](CHANGELOG.md) for what is new.
 
 ![The dashboard](docs/screenshots/1-dashboard.png)
@@ -48,9 +48,9 @@ Settings live in `%APPDATA%\Excel to KML\Project Folder Manager\settings.json`, 
 ## Releases
 A release is made by pushing a tag, never by hand:
 
-1. Write `docs/releases/v2.3.10.md` (the release's description) and add a line to `CHANGELOG.md`.
+1. Write `docs/releases/v7.0.1.md` (the release's description) and add a line to `CHANGELOG.md`.
    Without it the release still goes out, with a short description pointing to the changelog.
-2. Merge to `main`, then tag: `git tag v2.3.10 && git push origin v2.3.10` (or publish a release
+2. Merge to `main`, then tag: `git tag v7.0.1 && git push origin v7.0.1` (or publish a release
    with a new tag on GitHub).
 3. [`release.yml`](.github/workflows/release.yml) runs the tests, builds the program and the
    installer on Windows, installs and checks that very installer (`tool/windows_check.ps1`),
