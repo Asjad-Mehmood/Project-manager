@@ -57,7 +57,7 @@ jobs:
       - name: Build the program
         shell: pwsh
         run: |
-          flutter build windows --release --build-name=$env:VERSION --build-number=${{ github.run_number }} --dart-define=APP_VERSION=$env:VERSION
+          flutter build windows --release --build-name=$env:VERSION --build-number=${{ github.run_number }} --dart-define=PFM_VERSION=$env:VERSION
           # the Microsoft C++ runtime goes next to the program, so nothing else has to be installed
           foreach ($dll in 'msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll') {
             Copy-Item "C:\Windows\System32\$dll" build\windows\x64\runner\Release\
