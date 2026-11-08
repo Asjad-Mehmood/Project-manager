@@ -30,7 +30,7 @@ class TopBar extends StatelessWidget {
     required this.cmd,
     required this.searchField,
     required this.searchFocus,
-    required this.onCheckUpdates,
+    this.onCheckUpdates,
     this.clock,
   });
 
@@ -38,7 +38,9 @@ class TopBar extends StatelessWidget {
   final Commands cmd;
   final TextEditingController searchField;
   final FocusNode searchFocus;
-  final VoidCallback onCheckUpdates;
+
+  /// null inside the Survey Toolkit, which updates it: no "Look for an update"
+  final VoidCallback? onCheckUpdates;
 
   /// A fixed time, for screenshots
   final DateTime? clock;
@@ -271,7 +273,7 @@ class TopBar extends StatelessWidget {
     tip: 'More',
     items: () => [
       menuItem('Bring in settings from 6.2 ...', cmd.importV6, icon: Icons.file_download_outlined),
-      menuItem('Look for an update', onCheckUpdates, icon: Icons.system_update_alt),
+      if (onCheckUpdates != null) menuItem('Look for an update', onCheckUpdates!, icon: Icons.system_update_alt),
       menuItem('Manual  (F1)', cmd.manual, icon: Icons.menu_book_outlined),
       menuItem('Keyboard shortcuts', cmd.shortcuts, icon: Icons.keyboard_outlined),
       menuItem('About', cmd.about, icon: Icons.info_outline),

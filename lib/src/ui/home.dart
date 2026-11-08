@@ -166,7 +166,7 @@ class _HomeState extends State<Home> {
                         cmd: cmd,
                         searchField: _search,
                         searchFocus: _searchFocus,
-                        onCheckUpdates: () => widget.onCheckUpdates?.call(context),
+                        onCheckUpdates: widget.onCheckUpdates == null ? null : () => widget.onCheckUpdates!(context),
                         clock: widget.clock,
                       ),
                       if (m.options.drives) DrivesStrip(model: m, cmd: cmd),
