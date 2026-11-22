@@ -1,5 +1,7 @@
 #include "flutter_window.h"
 
+#include "start_splash.h"
+
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
@@ -29,6 +31,7 @@ bool FlutterWindow::OnCreate() {
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
+    CloseStartSplash();
   });
 
   // Flutter can complete the first frame before the "show window" callback is
