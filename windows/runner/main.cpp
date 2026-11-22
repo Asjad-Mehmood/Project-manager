@@ -1,8 +1,10 @@
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
+#include <wchar.h>
 #include <windows.h>
 
 #include "flutter_window.h"
+#include "start_splash.h"
 #include "utils.h"
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
@@ -27,6 +29,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+
+  // the start screen while the program starts (not for the --self-check job, which shows no window)
+  if (command_line == nullptr || ::wcsstr(command_line, L"--self-check") == nullptr) {
+    ShowStartSplash(instance, L"Project Folder Manager");
+  }
 
   flutter::DartProject project(L"data");
 
