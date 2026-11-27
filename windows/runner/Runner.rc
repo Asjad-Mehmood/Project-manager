@@ -93,7 +93,7 @@ BEGIN
             VALUE "FileDescription", "Project Folder Manager - a dashboard for a project's master folder" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "ProjectFolderManager" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 Asjad Mehmood. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 SurveyX Digital. All rights reserved." "\0"
             VALUE "OriginalFilename", "ProjectFolderManager.exe" "\0"
             VALUE "ProductName", "Project Folder Manager" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

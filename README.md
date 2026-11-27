@@ -1,6 +1,6 @@
 # Project Folder Manager
 
-A Windows dashboard for your project folders, by [Excel to KML](https://www.exceltokml.com/project-folder-manager):
+A Windows dashboard for your project folders, by [Excel to KML](https://www.surveyxdigital.com/project-folder-manager):
 open a drive or any folder and see the folders in it with their discipline colours (00 Admin …
 99 Archive), search every folder and file instantly, and view, copy, move, rename and tidy them in
 a side panel without leaving the dashboard.

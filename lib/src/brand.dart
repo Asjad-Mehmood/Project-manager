@@ -3,6 +3,6 @@
 // APP_VERSION: inside the Survey Toolkit that one is the Toolkit's version.
 const appName = 'Project Folder Manager';
 const appVersion = String.fromEnvironment('PFM_VERSION', defaultValue: '7.0.0');
-const appPublisher = 'exceltokml.com';
+const appPublisher = 'SurveyX Digital';
 const appTagline = 'Survey & Engineering Document Control';
-const appPage = 'https://www.exceltokml.com/project-folder-manager';
+const appPage = 'https://www.surveyxdigital.com/project-folder-manager';
