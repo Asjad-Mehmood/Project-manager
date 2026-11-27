@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'brand.dart';
 import 'state/app_model.dart';
+import 'support/app_info.dart';
+import 'support/crash_log.dart';
 import 'ui/home.dart';
 import 'ui/theme.dart';
 import 'update/updater.dart';
@@ -40,6 +42,8 @@ class _FolderManagerAppState extends State<FolderManagerApp> {
     navigatorKey: _nav,
     debugShowCheckedModeBanner: false,
     theme: pfmTheme(),
+    builder: (context, child) =>
+        CrashNotice(onReport: folderManagerInfo(widget.model.shell.openUrl).report, child: child!),
     home: Home(model: widget.model, clock: widget.clock, onCheckUpdates: (c) => checkForUpdate(c, asked: true)),
   );
 }

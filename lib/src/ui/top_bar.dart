@@ -19,6 +19,7 @@ import '../core/format.dart';
 import '../core/settings.dart';
 import '../platform/shell.dart';
 import '../state/app_model.dart';
+import '../support/crash_log.dart';
 import 'commands.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -276,6 +277,10 @@ class TopBar extends StatelessWidget {
       if (onCheckUpdates != null) menuItem('Look for an update', onCheckUpdates!, icon: Icons.system_update_alt),
       menuItem('Manual  (F1)', cmd.manual, icon: Icons.menu_book_outlined),
       menuItem('Keyboard shortcuts', cmd.shortcuts, icon: Icons.keyboard_outlined),
+      menuItem("What's new", cmd.whatsNew, icon: Icons.new_releases_outlined),
+      menuItem('Report a problem', cmd.reportProblem, icon: Icons.bug_report_outlined),
+      if (CrashLog.path != null) menuItem('Error log', cmd.errorLog, icon: Icons.folder_open_outlined),
+      menuItem('Open-source licences', cmd.licences, icon: Icons.gavel_outlined),
       menuItem('About', cmd.about, icon: Icons.info_outline),
     ],
   );

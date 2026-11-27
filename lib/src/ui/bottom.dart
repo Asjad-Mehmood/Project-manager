@@ -167,7 +167,7 @@ class StatusBar extends StatelessWidget {
               if (width >= 700) Text(right, style: t(10, color: C.faint, ls: 1)),
               if (width >= 900) ...[
                 const SizedBox(width: 18),
-                Text('$appName v$appVersion  ·  Excel to KML', style: t(10, color: C.faint, ls: 1)),
+                Text('$appName v$appVersion  ·  $appPublisher', style: t(10, color: C.faint, ls: 1)),
               ],
             ],
           ),
