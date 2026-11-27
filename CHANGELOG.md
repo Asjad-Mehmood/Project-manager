@@ -3,7 +3,7 @@
 ## 7.1.0
 Help in the More menu (What's new, Report a problem, the error log, the open-source licences), a
 notice and an error log for unexpected errors, a start screen while it opens, and the publisher
-exceltokml.com. See [docs/releases/v7.1.0.md](docs/releases/v7.1.0.md).
+SurveyX Digital. See [docs/releases/v7.1.0.md](docs/releases/v7.1.0.md).
 
 ## 7.0.0
 Rebuilt in Flutter as an installed Windows program with self-update, and a cleaner look. Opens a
