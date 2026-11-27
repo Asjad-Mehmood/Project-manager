@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:project_folder_manager/src/app.dart';
+import 'package:project_folder_manager/src/brand.dart';
 import 'package:project_folder_manager/src/core/indexer.dart';
 import 'package:project_folder_manager/src/core/search_index.dart';
 import 'package:project_folder_manager/src/ui/widgets.dart';
@@ -358,6 +359,22 @@ void main() {
     await tester.pump();
     expect(find.text('November 2026'), findsOneWidget);
     await close();
+
+    // More: help and support (What's new, Report a problem, licences) and About
+    await open(find.byTooltip('More'));
+    for (final x in ["What's new", 'Report a problem', 'Open-source licences', 'Keyboard shortcuts', 'About']) {
+      expect(find.text(x), findsOneWidget, reason: x);
+    }
+    await tester.tap(find.text('Report a problem'));
+    await tester.pumpAndSettle();
+    final report = Uri.parse(h.shell.opened.last);
+    expect(report.path, '/contact');
+    expect(report.queryParameters, containsPair('program', 'folder-manager'));
+    expect(report.queryParameters, containsPair('version', appVersion));
+    await open(find.byTooltip('More'));
+    await tester.tap(find.text('Open-source licences'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LicensePage), findsOneWidget);
   });
 
   testWidgets('MANUAL in the top bar (and F1) explains every part, topic by topic', (tester) async {

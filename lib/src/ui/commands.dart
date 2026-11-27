@@ -13,6 +13,9 @@ import '../core/names.dart';
 import '../core/settings.dart';
 import '../state/app_model.dart';
 import '../state/store.dart';
+import '../support/app_info.dart';
+import '../support/crash_log.dart';
+import '../support/help.dart';
 import 'dialogs/dialogs.dart';
 import 'dialogs/list_edit.dart';
 import 'dialogs/manual.dart';
@@ -168,6 +171,25 @@ class Commands {
       'F2                rename           Delete  to the Recycle Bin',
       'Ctrl+Z            undo',
     ],
+  );
+
+  AppInfo get _info => folderManagerInfo(model.shell.openUrl);
+
+  /// The release notes on the website
+  Future<void> whatsNew() => model.shell.openUrl(_info.whatsNewUrl);
+
+  /// The website's contact form, with the program, its version and Windows filled in
+  Future<void> reportProblem() => _info.report();
+
+  /// The folder with errors.log, to attach to a report
+  Future<void> errorLog() => CrashLog.openFolder();
+
+  /// The free software the program is built with, and their licences
+  void licences() => showLicensePage(
+    context: context,
+    applicationName: appName,
+    applicationVersion: 'Version $appVersion',
+    applicationLegalese: _info.legalese,
   );
 
   Future<void> about() => message(
