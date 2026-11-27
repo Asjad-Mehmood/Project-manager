@@ -9,6 +9,6 @@ AppInfo folderManagerInfo(Future<void> Function(String url) openUrl) => AppInfo(
   publisher: appPublisher,
   program: 'folder-manager',
   guideUrl: appPage,
-  whatsNewUrl: 'https://www.exceltokml.com/whats-new/folder-manager',
+  whatsNewUrl: 'https://www.surveyxdigital.com/whats-new/folder-manager',
   openUrl: openUrl,
 );
